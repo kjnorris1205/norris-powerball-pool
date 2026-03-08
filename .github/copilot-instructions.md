@@ -70,9 +70,10 @@ These are fixed rules the AI must respect when generating lottery logic:
 - **Matching Logic:** Compare entry white balls to draw white balls as unordered sets. Powerball is an exact match. Count matching white balls + whether Powerball matches to determine prize tier.
 
 ## State Data Model
-- Store all 50 states + DC in `tlkpStates` with fields: `StateCode` (PK, text 2), `StateName`, `FederalTaxRate` (Double), `StateTaxRate` (Double), `HasStateLottery` (Boolean).
+- Store all 50 states + DC in `tlkpStates` with fields: `StateCode` (PK, text 2), `StateName`, `FederalTaxRate` (Double), `StateTaxRate` (Double), `HasStateLottery` (Boolean), `HasPowerPlay` (Boolean), `HasDoublePlay` (Boolean).
+- `HasPowerPlay` and `HasDoublePlay` control whether those ticket options are available for the selected state of play.
 - Tax rates and state lottery participation should be updateable by the user.
-- The selected state in `tblSystemSettings` drives which tax rates apply to payout calculations.
+- The selected state in `tblSystemSettings` drives which tax rates and play options apply.
 
 ## Form & UI Standards
 - **Navigation:** Use a main dashboard (`frmMainDashboard`) with command buttons — not a switchboard or navigation pane.
