@@ -416,3 +416,7 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Microsoft Access lock files (local locking / temporary)
+*.laccdb
+*.ldb
