@@ -1,188 +1,1174 @@
 # Database Setup Instructions
 
-Open Microsoft Access → **Blank desktop database** → name it `NorrisPowerballPool.accdb` → **Create**.
+Create all tables and relationships programmatically using DAO. No manual property setting required.
 
-For every table below, go to **Create** tab → **Table Design**, add the listed fields, set the primary key, then save with the indicated name. Configure each field's properties exactly as shown — empty cells mean "leave at Access default."
+## Prerequisites
 
-## 1. Lookup / Reference Tables
+- A blank Access database named `NorrisPowerballPool.accdb` (or an existing one with no tables yet).
+- Open the database in Microsoft Access 2016+ or Microsoft 365.
 
-### `tlkpStates`
+## Setup Steps
 
-Stores all 50 US states plus DC. Seed this table with data after creation.
+1. Press **Alt+F11** to open the VBA editor.
+2. Go to **Insert** → **Module**. A new module window opens.
+3. Copy the entire VBA code block below and paste it into the new module.
+4. In the **Properties** window (press **F4** if not visible), change the module `(Name)` to `modTableSetup`.
+5. Press **Ctrl+S** to save.
+6. Press **Ctrl+G** to open the **Immediate Window**.
+7. Type `CreateAllTables` and press **Enter**.
+8. A confirmation message appears when all tables and relationships have been created.
 
-| Field Name | Data Type | Description | Field Size | Format | Decimal Places | Input Mask | Caption | Default Value | Validation Rule | Validation Text | Required | Indexed |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `StateCode` | Short Text | **Primary Key.** Two-letter state/territory code | 2 | | | >LL | State Code | | | | Yes | Yes (No Duplicates) |
-| `StateName` | Short Text | Full state or territory name | 50 | | | | State Name | | | | Yes | No |
-| `FederalTaxRate` | Number | Federal tax withholding rate as a decimal | Double | Percent | 2 | | Federal Tax Rate | 0.24 | >=0 And <=1 | Federal tax rate must be between 0% and 100%. | Yes | No |
-| `StateTaxRate` | Number | State tax withholding rate as a decimal | Double | Percent | 4 | | State Tax Rate | 0 | >=0 And <=1 | State tax rate must be between 0% and 100%. | Yes | No |
-| `HasStateLottery` | Yes/No | Whether the state participates in Powerball | | Yes/No | | | Has State Lottery | No | | | Yes | No |
-| `HasPowerPlay` | Yes/No | Whether Power Play is available in this state | | Yes/No | | | Has Power Play | No | | | Yes | No |
-| `HasDoublePlay` | Yes/No | Whether Double Play is available in this state | | Yes/No | | | Has Double Play | No | | | Yes | No |
+## VBA Code: `modTableSetup`
 
-> **Notes:** Double Play is available in a limited number of states. State tax rates reflect general lottery withholding and may vary by prize amount — these are user-editable. States without a lottery (AL, AK, HI, MS, NV, UT) have all play options set to No.
+```vb
+Option Compare Database
+Option Explicit
 
-### `tlkpPrizeTiers`
+Private Const APP_TITLE As String = "Norris Powerball Pool"
 
-Defines the 9 Powerball prize tiers. Seed this table with data after creation.
+'---------------------------------------------------------------------------------------
+' Name       : CreateAllTables
+' Purpose    : Orchestrate creation of all tables and relationships
+' Parameters : None
+' Returns    : None
+'---------------------------------------------------------------------------------------
+Public Sub CreateAllTables()
+    On Error GoTo ErrorHandler
 
-| Field Name | Data Type | Description | Field Size | Format | Decimal Places | Input Mask | Caption | Default Value | Validation Rule | Validation Text | Required | Indexed |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `PrizeTierID` | AutoNumber | **Primary Key.** Auto-generated tier identifier | Long Integer | | | | Prize Tier ID | | | | Yes | Yes (No Duplicates) |
-| `WhiteBallMatches` | Number | Number of white balls matched (0–5) | Integer | | | | White Ball Matches | | >=0 And <=5 | White ball matches must be between 0 and 5. | Yes | No |
-| `PowerballMatch` | Yes/No | Whether the Powerball was also matched | | Yes/No | | | Powerball Match | No | | | Yes | No |
-| `PrizeName` | Short Text | Display name (e.g., "Jackpot", "Match 4+PB") | 50 | | | | Prize Name | | | | Yes | No |
-| `DefaultPrizeAmount` | Currency | Default fixed prize amount ($0 for jackpot) | | Currency | 2 | | Default Prize Amount | 0 | >=0 | Default prize amount cannot be negative. | Yes | No |
+    ' Create tables in dependency order (parents before children)
+    CreateTable_tlkpStates
+    CreateTable_tlkpPrizeTiers
+    CreateTable_tlkpAppVersion
+    CreateTable_tblParticipants
+    CreateTable_tblDrawings
+    CreateTable_tblSystemSettings
+    CreateTable_tblTickets
+    CreateTable_tblContributions
 
-### `tlkpAppVersion`
+    ' Create relationships after all tables exist
+    CreateAllRelationships
 
-| Field Name | Data Type | Description | Field Size | Format | Decimal Places | Input Mask | Caption | Default Value | Validation Rule | Validation Text | Required | Indexed |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `VersionID` | AutoNumber | **Primary Key.** Auto-generated version identifier | Long Integer | | | | Version ID | | | | Yes | Yes (No Duplicates) |
-| `VersionNumber` | Short Text | Semantic version string (e.g., "1.0.0") | 20 | | | | Version Number | | | | Yes | No |
-| `ReleaseDate` | Date/Time | Date this version was released | | Short Date | | 99/99/0000;0;_ | Release Date | | | | Yes | No |
+    MsgBox "All tables and relationships created successfully.", _
+           vbInformation, APP_TITLE
 
-## 2. System Settings Table
+Exit_Procedure:
+    Exit Sub
 
-### `tblSystemSettings`
+ErrorHandler:
+    MsgBox "An error occurred in: CreateAllTables" & vbCrLf & vbCrLf & _
+           "Error #: " & Err.Number & vbCrLf & _
+           "Description: " & Err.Description, _
+           vbCritical, APP_TITLE
+    Resume Exit_Procedure
+End Sub
 
-Single-row table that stores global configuration. Loaded into a public variable on startup.
+'---------------------------------------------------------------------------------------
+' Name       : TableExists
+' Purpose    : Check if a table already exists in the current database
+' Parameters : strTableName (String) - Name of the table to check
+' Returns    : Boolean - True if the table exists
+'---------------------------------------------------------------------------------------
+Private Function TableExists(ByVal strTableName As String) As Boolean
+    On Error Resume Next
+    Dim td As DAO.TableDef
+    Set td = CurrentDb.TableDefs(strTableName)
+    TableExists = (Err.Number = 0)
+    Err.Clear
+    On Error GoTo 0
+End Function
 
-| Field Name | Data Type | Description | Field Size | Format | Decimal Places | Input Mask | Caption | Default Value | Validation Rule | Validation Text | Required | Indexed |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `SettingsID` | AutoNumber | **Primary Key.** Auto-generated settings identifier | Long Integer | | | | Settings ID | | | | Yes | Yes (No Duplicates) |
-| `PoolName` | Short Text | Name of the lottery pool | 100 | | | | Pool Name | | | | Yes | No |
-| `AdminName` | Short Text | Pool administrator's name | 100 | | | | Admin Name | | | | Yes | No |
-| `StateOfPlay` | Short Text | **Foreign Key** → `tlkpStates.StateCode` | 2 | | | >LL | State of Play | | | | Yes | Yes (Duplicates OK) |
+'---------------------------------------------------------------------------------------
+' Name       : RelationExists
+' Purpose    : Check if a relationship already exists in the current database
+' Parameters : strRelName (String) - Name of the relationship to check
+' Returns    : Boolean - True if the relationship exists
+'---------------------------------------------------------------------------------------
+Private Function RelationExists(ByVal strRelName As String) As Boolean
+    On Error Resume Next
+    Dim rel As DAO.Relation
+    Set rel = CurrentDb.Relations(strRelName)
+    RelationExists = (Err.Number = 0)
+    Err.Clear
+    On Error GoTo 0
+End Function
 
-## 3. Core Data Tables
+'---------------------------------------------------------------------------------------
+' Name       : SetFieldProperty
+' Purpose    : Set a custom property on a DAO field (creates property if it
+'              does not already exist, updates it if it does)
+' Parameters : fld (DAO.Field) - The field to set the property on
+'              strName (String) - Property name (e.g., "Caption", "Format")
+'              lngType (Long) - DAO data-type constant for the property value
+'              varValue (Variant) - Property value
+' Returns    : None
+'---------------------------------------------------------------------------------------
+Private Sub SetFieldProperty(fld As DAO.Field, ByVal strName As String, _
+                             ByVal lngType As Long, ByVal varValue As Variant)
+    On Error Resume Next
+    fld.Properties(strName) = varValue
+    If Err.Number <> 0 Then
+        Err.Clear
+        Dim prp As DAO.Property
+        Set prp = fld.CreateProperty(strName, lngType, varValue)
+        fld.Properties.Append prp
+    End If
+    On Error GoTo 0
+End Sub
 
-### `tblParticipants`
+' ======================================================================================
+'  LOOKUP / REFERENCE TABLES
+' ======================================================================================
 
-| Field Name | Data Type | Description | Field Size | Format | Decimal Places | Input Mask | Caption | Default Value | Validation Rule | Validation Text | Required | Indexed |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `ParticipantID` | AutoNumber | **Primary Key.** Auto-generated participant identifier | Long Integer | | | | Participant ID | | | | Yes | Yes (No Duplicates) |
-| `FirstName` | Short Text | Participant's first name | 50 | | | | First Name | | | | Yes | No |
-| `LastName` | Short Text | Participant's last name | 50 | | | | Last Name | | | | Yes | No |
-| `Email` | Short Text | Participant's email address | 100 | | | | Email | | | | No | No |
-| `Phone` | Short Text | Participant's phone number | 20 | | | !\(999") "000\-0000;0;_ | Phone | | | | No | No |
-| `IsActive` | Yes/No | Whether this participant is currently active in the pool | | Yes/No | | | Active | Yes | | | Yes | No |
+'---------------------------------------------------------------------------------------
+' Name       : CreateTable_tlkpStates
+' Purpose    : Create the tlkpStates lookup table (50 US states + DC)
+' Parameters : None
+' Returns    : None
+'---------------------------------------------------------------------------------------
+Private Sub CreateTable_tlkpStates()
+    On Error GoTo ErrorHandler
 
-### `tblDrawings`
+    If TableExists("tlkpStates") Then
+        Debug.Print "Table tlkpStates already exists - skipped."
+        Exit Sub
+    End If
 
-Stores official Powerball draw results. **One field per ball.**
+    Dim db As DAO.Database
+    Dim td As DAO.TableDef
+    Dim fld As DAO.Field
+    Dim idx As DAO.Index
 
-| Field Name | Data Type | Description | Field Size | Format | Decimal Places | Input Mask | Caption | Default Value | Validation Rule | Validation Text | Required | Indexed |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `DrawingID` | AutoNumber | **Primary Key.** Auto-generated drawing identifier | Long Integer | | | | Drawing ID | | | | Yes | Yes (No Duplicates) |
-| `DrawDate` | Date/Time | Official draw date. Must be Mon, Wed, or Sat | | Short Date | | 99/99/0000;0;_ | Draw Date | | Weekday([DrawDate]) In (2,4,7) | Draw date must be a Monday, Wednesday, or Saturday. | Yes | Yes (No Duplicates) |
-| `WB1` | Number | Winning white ball 1 | Integer | | 0 | | WB 1 | | >=1 And <=69 | White ball must be between 1 and 69. | Yes | No |
-| `WB2` | Number | Winning white ball 2 | Integer | | 0 | | WB 2 | | >=1 And <=69 | White ball must be between 1 and 69. | Yes | No |
-| `WB3` | Number | Winning white ball 3 | Integer | | 0 | | WB 3 | | >=1 And <=69 | White ball must be between 1 and 69. | Yes | No |
-| `WB4` | Number | Winning white ball 4 | Integer | | 0 | | WB 4 | | >=1 And <=69 | White ball must be between 1 and 69. | Yes | No |
-| `WB5` | Number | Winning white ball 5 | Integer | | 0 | | WB 5 | | >=1 And <=69 | White ball must be between 1 and 69. | Yes | No |
-| `PB` | Number | Winning Powerball number | Integer | | 0 | | Powerball | | >=1 And <=26 | Powerball must be between 1 and 26. | Yes | No |
-| `JackpotAmount` | Currency | Estimated or actual jackpot for this drawing | | Currency | 2 | | Jackpot Amount | 0 | >=0 | Jackpot amount cannot be negative. | No | No |
-| `IsVerified` | Yes/No | Whether results have been officially confirmed | | Yes/No | | | Verified | No | | | Yes | No |
+    Set db = CurrentDb()
+    Set td = db.CreateTableDef("tlkpStates")
 
-> **Additional rule:** All five white ball values (`WB1`–`WB5`) must be distinct. Enforce via VBA validation in `modLotteryLogic` before saving, since Access table-level validation cannot easily cross-reference five fields for uniqueness.
+    ' --- StateCode (PK, Short Text, 2) ---
+    Set fld = td.CreateField("StateCode", dbText, 2)
+    fld.Required = True
+    fld.AllowZeroLength = False
+    td.Fields.Append fld
 
-### `tblTickets`
+    ' --- StateName (Short Text, 50) ---
+    Set fld = td.CreateField("StateName", dbText, 50)
+    fld.Required = True
+    fld.AllowZeroLength = False
+    td.Fields.Append fld
 
-Stores pool ticket entries (purchased numbers). **One field per ball.**
+    ' --- FederalTaxRate (Double) ---
+    Set fld = td.CreateField("FederalTaxRate", dbDouble)
+    fld.Required = True
+    fld.DefaultValue = "0.24"
+    fld.ValidationRule = ">=0 And <=1"
+    fld.ValidationText = "Federal tax rate must be between 0% and 100%."
+    td.Fields.Append fld
 
-| Field Name | Data Type | Description | Field Size | Format | Decimal Places | Input Mask | Caption | Default Value | Validation Rule | Validation Text | Required | Indexed |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `TicketID` | AutoNumber | **Primary Key.** Auto-generated ticket identifier | Long Integer | | | | Ticket ID | | | | Yes | Yes (No Duplicates) |
-| `DrawingID` | Number | **Foreign Key** → `tblDrawings.DrawingID` | Long Integer | | 0 | | Drawing ID | | | | Yes | Yes (Duplicates OK) |
-| `WB1` | Number | White ball 1 | Integer | | 0 | | WB 1 | | >=1 And <=69 | White ball must be between 1 and 69. | Yes | No |
-| `WB2` | Number | White ball 2 | Integer | | 0 | | WB 2 | | >=1 And <=69 | White ball must be between 1 and 69. | Yes | No |
-| `WB3` | Number | White ball 3 | Integer | | 0 | | WB 3 | | >=1 And <=69 | White ball must be between 1 and 69. | Yes | No |
-| `WB4` | Number | White ball 4 | Integer | | 0 | | WB 4 | | >=1 And <=69 | White ball must be between 1 and 69. | Yes | No |
-| `WB5` | Number | White ball 5 | Integer | | 0 | | WB 5 | | >=1 And <=69 | White ball must be between 1 and 69. | Yes | No |
-| `PB` | Number | Powerball | Integer | | 0 | | Powerball | | >=1 And <=26 | Powerball must be between 1 and 26. | Yes | No |
-| `IsPowerPlay` | Yes/No | Whether this ticket includes Power Play | | Yes/No | | | Power Play | No | | | Yes | No |
-| `IsDoublePlay` | Yes/No | Whether this ticket includes Double Play | | Yes/No | | | Double Play | No | | | Yes | No |
+    ' --- StateTaxRate (Double) ---
+    Set fld = td.CreateField("StateTaxRate", dbDouble)
+    fld.Required = True
+    fld.DefaultValue = "0"
+    fld.ValidationRule = ">=0 And <=1"
+    fld.ValidationText = "State tax rate must be between 0% and 100%."
+    td.Fields.Append fld
 
-> **Additional rule:** All five white ball values (`WB1`–`WB5`) must be distinct. Enforce via VBA validation in `modLotteryLogic` before saving.
+    ' --- HasStateLottery (Yes/No) ---
+    Set fld = td.CreateField("HasStateLottery", dbBoolean)
+    fld.Required = True
+    fld.DefaultValue = "False"
+    td.Fields.Append fld
 
-### `tblContributions`
+    ' --- HasPowerPlay (Yes/No) ---
+    Set fld = td.CreateField("HasPowerPlay", dbBoolean)
+    fld.Required = True
+    fld.DefaultValue = "False"
+    td.Fields.Append fld
 
-Tracks participant payments per drawing.
+    ' --- HasDoublePlay (Yes/No) ---
+    Set fld = td.CreateField("HasDoublePlay", dbBoolean)
+    fld.Required = True
+    fld.DefaultValue = "False"
+    td.Fields.Append fld
 
-| Field Name | Data Type | Description | Field Size | Format | Decimal Places | Input Mask | Caption | Default Value | Validation Rule | Validation Text | Required | Indexed |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| `ContributionID` | AutoNumber | **Primary Key.** Auto-generated contribution identifier | Long Integer | | | | Contribution ID | | | | Yes | Yes (No Duplicates) |
-| `ParticipantID` | Number | **Foreign Key** → `tblParticipants.ParticipantID` | Long Integer | | 0 | | Participant ID | | | | Yes | Yes (Duplicates OK) |
-| `DrawingID` | Number | **Foreign Key** → `tblDrawings.DrawingID` | Long Integer | | 0 | | Drawing ID | | | | Yes | Yes (Duplicates OK) |
-| `AmountPaid` | Currency | Amount contributed by this participant | | Currency | 2 | | Amount Paid | | >0 | Amount paid must be greater than zero. | Yes | No |
-| `DatePaid` | Date/Time | Date payment was received | | Short Date | | 99/99/0000;0;_ | Date Paid | =Date() | | | Yes | No |
+    ' --- Primary Key ---
+    Set idx = td.CreateIndex("PrimaryKey")
+    idx.Primary = True
+    idx.Unique = True
+    idx.Required = True
+    Set fld = idx.CreateField("StateCode")
+    idx.Fields.Append fld
+    td.Indexes.Append idx
 
-## 4. Define Relationships
+    ' Append table to database
+    db.TableDefs.Append td
+    db.TableDefs.Refresh
 
-Go to **Database Tools** → **Relationships** and create the following:
+    ' --- Set custom properties (must be done after table is appended) ---
+    Set td = db.TableDefs("tlkpStates")
 
-| Parent Table | Parent Field | Child Table | Child Field | Enforce RI | Cascade Update |
-|---|---|---|---|---|---|
-| `tlkpStates` | `StateCode` | `tblSystemSettings` | `StateOfPlay` | Yes | Yes |
-| `tblDrawings` | `DrawingID` | `tblTickets` | `DrawingID` | Yes | Yes |
-| `tblDrawings` | `DrawingID` | `tblContributions` | `DrawingID` | Yes | Yes |
-| `tblParticipants` | `ParticipantID` | `tblContributions` | `ParticipantID` | Yes | Yes |
+    Set fld = td.Fields("StateCode")
+    SetFieldProperty fld, "Description", dbText, "Two-letter state/territory code"
+    SetFieldProperty fld, "Caption", dbText, "State Code"
+    SetFieldProperty fld, "InputMask", dbText, ">LL"
 
-## 5. Startup Configuration
+    Set fld = td.Fields("StateName")
+    SetFieldProperty fld, "Description", dbText, "Full state or territory name"
+    SetFieldProperty fld, "Caption", dbText, "State Name"
 
-Create an **AutoExec macro** (`mcrAutoExec`) that calls `modStartup.InitializeApp` on database open. This procedure loads `tblSystemSettings` values into public variables for use throughout the application.
+    Set fld = td.Fields("FederalTaxRate")
+    SetFieldProperty fld, "Description", dbText, "Federal tax withholding rate as a decimal"
+    SetFieldProperty fld, "Caption", dbText, "Federal Tax Rate"
+    SetFieldProperty fld, "Format", dbText, "Percent"
+    SetFieldProperty fld, "DecimalPlaces", dbByte, 2
 
-## 6. MVP Forms
+    Set fld = td.Fields("StateTaxRate")
+    SetFieldProperty fld, "Description", dbText, "State tax withholding rate as a decimal"
+    SetFieldProperty fld, "Caption", dbText, "State Tax Rate"
+    SetFieldProperty fld, "Format", dbText, "Percent"
+    SetFieldProperty fld, "DecimalPlaces", dbByte, 4
 
-| Form Name | Purpose |
-|---|---|
-| `frmMainDashboard` | Central navigation with command buttons |
-| `frmSettings` | Edit pool name, admin name, state of play |
-| `frmParticipants` | Add/edit/remove pool members |
-| `frmTicketEntry` | Record purchased ticket numbers for a drawing |
-| `frmDrawResults` | Enter official winning numbers for a draw date |
-| `frmMatchResults` | View match-checking results by drawing |
+    Set fld = td.Fields("HasStateLottery")
+    SetFieldProperty fld, "Description", dbText, "Whether the state participates in Powerball"
+    SetFieldProperty fld, "Caption", dbText, "Has State Lottery"
+    SetFieldProperty fld, "Format", dbText, "Yes/No"
 
-## 7. MVP Queries
+    Set fld = td.Fields("HasPowerPlay")
+    SetFieldProperty fld, "Description", dbText, "Whether Power Play is available in this state"
+    SetFieldProperty fld, "Caption", dbText, "Has Power Play"
+    SetFieldProperty fld, "Format", dbText, "Yes/No"
 
-| Query Name | Purpose |
-|---|---|
-| `qryMatchCheck` | Compare `tblTickets` entries against `tblDrawings` results for a given `DrawingID`. Count matching white balls (unordered set comparison) and check Powerball exact match. |
-| `qryWinningTickets` | Filter `qryMatchCheck` results to only rows with at least one prize-tier match (0+PB or better). |
-| `qryUnpaidParticipants` | Find active participants with no contribution record for a given `DrawingID`. |
-| `qryTicketsByDrawing` | List all tickets for a selected drawing. |
+    Set fld = td.Fields("HasDoublePlay")
+    SetFieldProperty fld, "Description", dbText, "Whether Double Play is available in this state"
+    SetFieldProperty fld, "Caption", dbText, "Has Double Play"
+    SetFieldProperty fld, "Format", dbText, "Yes/No"
 
-## 8. Naming Conventions
+    Debug.Print "Table tlkpStates created successfully."
 
-| Object Type | Prefix | Example |
-|---|---|---|
-| Tables | `tbl` | `tblParticipants` |
-| Lookup Tables | `tlkp` | `tlkpStates` |
-| Queries | `qry` | `qryWinningTickets` |
-| Forms | `frm` | `frmMainDashboard` |
-| Reports | `rpt` | `rptTicketLog` |
-| Standard Modules | `mod` | `modLotteryLogic` |
-| Class Modules | `cls` | `clsTicketValidator` |
-| Macros | `mcr` | `mcrAutoExec` |
+Exit_Procedure:
+    Set fld = Nothing
+    Set idx = Nothing
+    Set td = Nothing
+    Set db = Nothing
+    Exit Sub
 
-## 9. Coding Standards
+ErrorHandler:
+    MsgBox "An error occurred in: CreateTable_tlkpStates" & vbCrLf & vbCrLf & _
+           "Error #: " & Err.Number & vbCrLf & _
+           "Description: " & Err.Description, _
+           vbCritical, APP_TITLE
+    Resume Exit_Procedure
+End Sub
 
-- **VBA only.** All modules require `Option Explicit`.
-- **DAO** for all recordset operations (not ADO).
-- **Error handling** in every procedure: `On Error GoTo ErrorHandler` with `MsgBox` title `"Norris Powerball Pool"`.
-- **No magic numbers.** Use constants (e.g., `Const MAX_WHITE_BALLS As Integer = 5`).
-- **No hard-coded file paths.** Use `CurrentProject.Path`.
-- **No `DoCmd.RunSQL`.** Use `CurrentDb.Execute` with `dbFailOnError`.
-- **Parameterized queries** for any user-supplied values (no SQL string concatenation).
-- **CamelCase** naming for all objects — no spaces or special characters.
+'---------------------------------------------------------------------------------------
+' Name       : CreateTable_tlkpPrizeTiers
+' Purpose    : Create the tlkpPrizeTiers lookup table (9 Powerball prize tiers)
+' Parameters : None
+' Returns    : None
+'---------------------------------------------------------------------------------------
+Private Sub CreateTable_tlkpPrizeTiers()
+    On Error GoTo ErrorHandler
 
-## 10. Match-Checking Logic (Overview)
+    If TableExists("tlkpPrizeTiers") Then
+        Debug.Print "Table tlkpPrizeTiers already exists - skipped."
+        Exit Sub
+    End If
 
-The core matching algorithm compares a ticket's five white balls against the drawing's five white balls as **unordered sets** and checks for an **exact Powerball match**:
+    Dim db As DAO.Database
+    Dim td As DAO.TableDef
+    Dim fld As DAO.Field
+    Dim idx As DAO.Index
 
-1. Count how many of the ticket's `WB1`–`WB5` values appear in the drawing's `WB1`–`WB5` values.
-2. Check if the ticket's `PB` equals the drawing's `PB`.
-3. Look up the resulting (white ball count, Powerball match) pair in `tlkpPrizeTiers` to determine the prize tier.
+    Set db = CurrentDb()
+    Set td = db.CreateTableDef("tlkpPrizeTiers")
 
-This logic lives in `modLotteryLogic`, not in form code-behind.
+    ' --- PrizeTierID (AutoNumber PK) ---
+    Set fld = td.CreateField("PrizeTierID", dbLong)
+    fld.Attributes = dbAutoIncrField
+    fld.Required = True
+    td.Fields.Append fld
+
+    ' --- WhiteBallMatches (Integer) ---
+    Set fld = td.CreateField("WhiteBallMatches", dbInteger)
+    fld.Required = True
+    fld.ValidationRule = ">=0 And <=5"
+    fld.ValidationText = "White ball matches must be between 0 and 5."
+    td.Fields.Append fld
+
+    ' --- PowerballMatch (Yes/No) ---
+    Set fld = td.CreateField("PowerballMatch", dbBoolean)
+    fld.Required = True
+    fld.DefaultValue = "False"
+    td.Fields.Append fld
+
+    ' --- PrizeName (Short Text, 50) ---
+    Set fld = td.CreateField("PrizeName", dbText, 50)
+    fld.Required = True
+    fld.AllowZeroLength = False
+    td.Fields.Append fld
+
+    ' --- DefaultPrizeAmount (Currency) ---
+    Set fld = td.CreateField("DefaultPrizeAmount", dbCurrency)
+    fld.Required = True
+    fld.DefaultValue = "0"
+    fld.ValidationRule = ">=0"
+    fld.ValidationText = "Default prize amount cannot be negative."
+    td.Fields.Append fld
+
+    ' --- Primary Key ---
+    Set idx = td.CreateIndex("PrimaryKey")
+    idx.Primary = True
+    idx.Unique = True
+    idx.Required = True
+    Set fld = idx.CreateField("PrizeTierID")
+    idx.Fields.Append fld
+    td.Indexes.Append idx
+
+    ' Append table to database
+    db.TableDefs.Append td
+    db.TableDefs.Refresh
+
+    ' --- Set custom properties ---
+    Set td = db.TableDefs("tlkpPrizeTiers")
+
+    Set fld = td.Fields("PrizeTierID")
+    SetFieldProperty fld, "Description", dbText, "Auto-generated tier identifier"
+    SetFieldProperty fld, "Caption", dbText, "Prize Tier ID"
+
+    Set fld = td.Fields("WhiteBallMatches")
+    SetFieldProperty fld, "Description", dbText, "Number of white balls matched (0-5)"
+    SetFieldProperty fld, "Caption", dbText, "White Ball Matches"
+    SetFieldProperty fld, "DecimalPlaces", dbByte, 0
+
+    Set fld = td.Fields("PowerballMatch")
+    SetFieldProperty fld, "Description", dbText, "Whether the Powerball was also matched"
+    SetFieldProperty fld, "Caption", dbText, "Powerball Match"
+    SetFieldProperty fld, "Format", dbText, "Yes/No"
+
+    Set fld = td.Fields("PrizeName")
+    SetFieldProperty fld, "Description", dbText, "Display name (e.g., ""Jackpot"", ""Match 4+PB"")"
+    SetFieldProperty fld, "Caption", dbText, "Prize Name"
+
+    Set fld = td.Fields("DefaultPrizeAmount")
+    SetFieldProperty fld, "Description", dbText, "Default fixed prize amount ($0 for jackpot)"
+    SetFieldProperty fld, "Caption", dbText, "Default Prize Amount"
+    SetFieldProperty fld, "Format", dbText, "Currency"
+    SetFieldProperty fld, "DecimalPlaces", dbByte, 2
+
+    Debug.Print "Table tlkpPrizeTiers created successfully."
+
+Exit_Procedure:
+    Set fld = Nothing
+    Set idx = Nothing
+    Set td = Nothing
+    Set db = Nothing
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "An error occurred in: CreateTable_tlkpPrizeTiers" & vbCrLf & vbCrLf & _
+           "Error #: " & Err.Number & vbCrLf & _
+           "Description: " & Err.Description, _
+           vbCritical, APP_TITLE
+    Resume Exit_Procedure
+End Sub
+
+'---------------------------------------------------------------------------------------
+' Name       : CreateTable_tlkpAppVersion
+' Purpose    : Create the tlkpAppVersion lookup table
+' Parameters : None
+' Returns    : None
+'---------------------------------------------------------------------------------------
+Private Sub CreateTable_tlkpAppVersion()
+    On Error GoTo ErrorHandler
+
+    If TableExists("tlkpAppVersion") Then
+        Debug.Print "Table tlkpAppVersion already exists - skipped."
+        Exit Sub
+    End If
+
+    Dim db As DAO.Database
+    Dim td As DAO.TableDef
+    Dim fld As DAO.Field
+    Dim idx As DAO.Index
+
+    Set db = CurrentDb()
+    Set td = db.CreateTableDef("tlkpAppVersion")
+
+    ' --- VersionID (AutoNumber PK) ---
+    Set fld = td.CreateField("VersionID", dbLong)
+    fld.Attributes = dbAutoIncrField
+    fld.Required = True
+    td.Fields.Append fld
+
+    ' --- VersionNumber (Short Text, 20) ---
+    Set fld = td.CreateField("VersionNumber", dbText, 20)
+    fld.Required = True
+    fld.AllowZeroLength = False
+    td.Fields.Append fld
+
+    ' --- ReleaseDate (Date/Time) ---
+    Set fld = td.CreateField("ReleaseDate", dbDate)
+    fld.Required = True
+    td.Fields.Append fld
+
+    ' --- Primary Key ---
+    Set idx = td.CreateIndex("PrimaryKey")
+    idx.Primary = True
+    idx.Unique = True
+    idx.Required = True
+    Set fld = idx.CreateField("VersionID")
+    idx.Fields.Append fld
+    td.Indexes.Append idx
+
+    ' Append table to database
+    db.TableDefs.Append td
+    db.TableDefs.Refresh
+
+    ' --- Set custom properties ---
+    Set td = db.TableDefs("tlkpAppVersion")
+
+    Set fld = td.Fields("VersionID")
+    SetFieldProperty fld, "Description", dbText, "Auto-generated version identifier"
+    SetFieldProperty fld, "Caption", dbText, "Version ID"
+
+    Set fld = td.Fields("VersionNumber")
+    SetFieldProperty fld, "Description", dbText, "Semantic version string (e.g., ""1.0.0"")"
+    SetFieldProperty fld, "Caption", dbText, "Version Number"
+
+    Set fld = td.Fields("ReleaseDate")
+    SetFieldProperty fld, "Description", dbText, "Date this version was released"
+    SetFieldProperty fld, "Caption", dbText, "Release Date"
+    SetFieldProperty fld, "Format", dbText, "Short Date"
+    SetFieldProperty fld, "InputMask", dbText, "99/99/0000;0;_"
+
+    Debug.Print "Table tlkpAppVersion created successfully."
+
+Exit_Procedure:
+    Set fld = Nothing
+    Set idx = Nothing
+    Set td = Nothing
+    Set db = Nothing
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "An error occurred in: CreateTable_tlkpAppVersion" & vbCrLf & vbCrLf & _
+           "Error #: " & Err.Number & vbCrLf & _
+           "Description: " & Err.Description, _
+           vbCritical, APP_TITLE
+    Resume Exit_Procedure
+End Sub
+
+' ======================================================================================
+'  SYSTEM SETTINGS TABLE
+' ======================================================================================
+
+'---------------------------------------------------------------------------------------
+' Name       : CreateTable_tblSystemSettings
+' Purpose    : Create the tblSystemSettings single-row config table
+' Parameters : None
+' Returns    : None
+'---------------------------------------------------------------------------------------
+Private Sub CreateTable_tblSystemSettings()
+    On Error GoTo ErrorHandler
+
+    If TableExists("tblSystemSettings") Then
+        Debug.Print "Table tblSystemSettings already exists - skipped."
+        Exit Sub
+    End If
+
+    Dim db As DAO.Database
+    Dim td As DAO.TableDef
+    Dim fld As DAO.Field
+    Dim idx As DAO.Index
+
+    Set db = CurrentDb()
+    Set td = db.CreateTableDef("tblSystemSettings")
+
+    ' --- SettingsID (AutoNumber PK) ---
+    Set fld = td.CreateField("SettingsID", dbLong)
+    fld.Attributes = dbAutoIncrField
+    fld.Required = True
+    td.Fields.Append fld
+
+    ' --- PoolName (Short Text, 100) ---
+    Set fld = td.CreateField("PoolName", dbText, 100)
+    fld.Required = True
+    fld.AllowZeroLength = False
+    td.Fields.Append fld
+
+    ' --- AdminName (Short Text, 100) ---
+    Set fld = td.CreateField("AdminName", dbText, 100)
+    fld.Required = True
+    fld.AllowZeroLength = False
+    td.Fields.Append fld
+
+    ' --- StateOfPlay (Short Text, 2 — FK to tlkpStates.StateCode) ---
+    Set fld = td.CreateField("StateOfPlay", dbText, 2)
+    fld.Required = True
+    fld.AllowZeroLength = False
+    td.Fields.Append fld
+
+    ' --- Primary Key ---
+    Set idx = td.CreateIndex("PrimaryKey")
+    idx.Primary = True
+    idx.Unique = True
+    idx.Required = True
+    Set fld = idx.CreateField("SettingsID")
+    idx.Fields.Append fld
+    td.Indexes.Append idx
+
+    ' --- Index on StateOfPlay (Duplicates OK) ---
+    Set idx = td.CreateIndex("StateOfPlay")
+    idx.Unique = False
+    Set fld = idx.CreateField("StateOfPlay")
+    idx.Fields.Append fld
+    td.Indexes.Append idx
+
+    ' Append table to database
+    db.TableDefs.Append td
+    db.TableDefs.Refresh
+
+    ' --- Set custom properties ---
+    Set td = db.TableDefs("tblSystemSettings")
+
+    Set fld = td.Fields("SettingsID")
+    SetFieldProperty fld, "Description", dbText, "Auto-generated settings identifier"
+    SetFieldProperty fld, "Caption", dbText, "Settings ID"
+
+    Set fld = td.Fields("PoolName")
+    SetFieldProperty fld, "Description", dbText, "Name of the lottery pool"
+    SetFieldProperty fld, "Caption", dbText, "Pool Name"
+
+    Set fld = td.Fields("AdminName")
+    SetFieldProperty fld, "Description", dbText, "Pool administrator's name"
+    SetFieldProperty fld, "Caption", dbText, "Admin Name"
+
+    Set fld = td.Fields("StateOfPlay")
+    SetFieldProperty fld, "Description", dbText, "Foreign Key to tlkpStates.StateCode"
+    SetFieldProperty fld, "Caption", dbText, "State of Play"
+    SetFieldProperty fld, "InputMask", dbText, ">LL"
+
+    Debug.Print "Table tblSystemSettings created successfully."
+
+Exit_Procedure:
+    Set fld = Nothing
+    Set idx = Nothing
+    Set td = Nothing
+    Set db = Nothing
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "An error occurred in: CreateTable_tblSystemSettings" & vbCrLf & vbCrLf & _
+           "Error #: " & Err.Number & vbCrLf & _
+           "Description: " & Err.Description, _
+           vbCritical, APP_TITLE
+    Resume Exit_Procedure
+End Sub
+
+' ======================================================================================
+'  CORE DATA TABLES
+' ======================================================================================
+
+'---------------------------------------------------------------------------------------
+' Name       : CreateTable_tblParticipants
+' Purpose    : Create the tblParticipants table for pool members
+' Parameters : None
+' Returns    : None
+'---------------------------------------------------------------------------------------
+Private Sub CreateTable_tblParticipants()
+    On Error GoTo ErrorHandler
+
+    If TableExists("tblParticipants") Then
+        Debug.Print "Table tblParticipants already exists - skipped."
+        Exit Sub
+    End If
+
+    Dim db As DAO.Database
+    Dim td As DAO.TableDef
+    Dim fld As DAO.Field
+    Dim idx As DAO.Index
+
+    Set db = CurrentDb()
+    Set td = db.CreateTableDef("tblParticipants")
+
+    ' --- ParticipantID (AutoNumber PK) ---
+    Set fld = td.CreateField("ParticipantID", dbLong)
+    fld.Attributes = dbAutoIncrField
+    fld.Required = True
+    td.Fields.Append fld
+
+    ' --- FirstName (Short Text, 50) ---
+    Set fld = td.CreateField("FirstName", dbText, 50)
+    fld.Required = True
+    fld.AllowZeroLength = False
+    td.Fields.Append fld
+
+    ' --- LastName (Short Text, 50) ---
+    Set fld = td.CreateField("LastName", dbText, 50)
+    fld.Required = True
+    fld.AllowZeroLength = False
+    td.Fields.Append fld
+
+    ' --- Email (Short Text, 100) — optional ---
+    Set fld = td.CreateField("Email", dbText, 100)
+    fld.Required = False
+    td.Fields.Append fld
+
+    ' --- Phone (Short Text, 20) — optional ---
+    Set fld = td.CreateField("Phone", dbText, 20)
+    fld.Required = False
+    td.Fields.Append fld
+
+    ' --- IsActive (Yes/No) ---
+    Set fld = td.CreateField("IsActive", dbBoolean)
+    fld.Required = True
+    fld.DefaultValue = "True"
+    td.Fields.Append fld
+
+    ' --- Primary Key ---
+    Set idx = td.CreateIndex("PrimaryKey")
+    idx.Primary = True
+    idx.Unique = True
+    idx.Required = True
+    Set fld = idx.CreateField("ParticipantID")
+    idx.Fields.Append fld
+    td.Indexes.Append idx
+
+    ' Append table to database
+    db.TableDefs.Append td
+    db.TableDefs.Refresh
+
+    ' --- Set custom properties ---
+    Set td = db.TableDefs("tblParticipants")
+
+    Set fld = td.Fields("ParticipantID")
+    SetFieldProperty fld, "Description", dbText, "Auto-generated participant identifier"
+    SetFieldProperty fld, "Caption", dbText, "Participant ID"
+
+    Set fld = td.Fields("FirstName")
+    SetFieldProperty fld, "Description", dbText, "Participant's first name"
+    SetFieldProperty fld, "Caption", dbText, "First Name"
+
+    Set fld = td.Fields("LastName")
+    SetFieldProperty fld, "Description", dbText, "Participant's last name"
+    SetFieldProperty fld, "Caption", dbText, "Last Name"
+
+    Set fld = td.Fields("Email")
+    SetFieldProperty fld, "Description", dbText, "Participant's email address"
+    SetFieldProperty fld, "Caption", dbText, "Email"
+
+    Set fld = td.Fields("Phone")
+    SetFieldProperty fld, "Description", dbText, "Participant's phone number"
+    SetFieldProperty fld, "Caption", dbText, "Phone"
+    SetFieldProperty fld, "InputMask", dbText, "!\(999"") ""000\-0000;0;_"
+
+    Set fld = td.Fields("IsActive")
+    SetFieldProperty fld, "Description", dbText, _
+        "Whether this participant is currently active in the pool"
+    SetFieldProperty fld, "Caption", dbText, "Active"
+    SetFieldProperty fld, "Format", dbText, "Yes/No"
+
+    Debug.Print "Table tblParticipants created successfully."
+
+Exit_Procedure:
+    Set fld = Nothing
+    Set idx = Nothing
+    Set td = Nothing
+    Set db = Nothing
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "An error occurred in: CreateTable_tblParticipants" & vbCrLf & vbCrLf & _
+           "Error #: " & Err.Number & vbCrLf & _
+           "Description: " & Err.Description, _
+           vbCritical, APP_TITLE
+    Resume Exit_Procedure
+End Sub
+
+'---------------------------------------------------------------------------------------
+' Name       : CreateTable_tblDrawings
+' Purpose    : Create the tblDrawings table for official Powerball draw results
+' Parameters : None
+' Returns    : None
+'---------------------------------------------------------------------------------------
+Private Sub CreateTable_tblDrawings()
+    On Error GoTo ErrorHandler
+
+    If TableExists("tblDrawings") Then
+        Debug.Print "Table tblDrawings already exists - skipped."
+        Exit Sub
+    End If
+
+    Dim db As DAO.Database
+    Dim td As DAO.TableDef
+    Dim fld As DAO.Field
+    Dim idx As DAO.Index
+
+    Set db = CurrentDb()
+    Set td = db.CreateTableDef("tblDrawings")
+
+    ' --- DrawingID (AutoNumber PK) ---
+    Set fld = td.CreateField("DrawingID", dbLong)
+    fld.Attributes = dbAutoIncrField
+    fld.Required = True
+    td.Fields.Append fld
+
+    ' --- DrawDate (Date/Time) ---
+    Set fld = td.CreateField("DrawDate", dbDate)
+    fld.Required = True
+    fld.ValidationRule = "Weekday([DrawDate]) In (2,4,7)"
+    fld.ValidationText = "Draw date must be a Monday, Wednesday, or Saturday."
+    td.Fields.Append fld
+
+    ' --- WB1 through WB5 (Integer, 1-69) ---
+    Dim i As Integer
+    For i = 1 To 5
+        Set fld = td.CreateField("WB" & i, dbInteger)
+        fld.Required = True
+        fld.ValidationRule = ">=1 And <=69"
+        fld.ValidationText = "White ball must be between 1 and 69."
+        td.Fields.Append fld
+    Next i
+
+    ' --- PB (Integer, 1-26) ---
+    Set fld = td.CreateField("PB", dbInteger)
+    fld.Required = True
+    fld.ValidationRule = ">=1 And <=26"
+    fld.ValidationText = "Powerball must be between 1 and 26."
+    td.Fields.Append fld
+
+    ' --- JackpotAmount (Currency) — optional ---
+    Set fld = td.CreateField("JackpotAmount", dbCurrency)
+    fld.Required = False
+    fld.DefaultValue = "0"
+    fld.ValidationRule = ">=0"
+    fld.ValidationText = "Jackpot amount cannot be negative."
+    td.Fields.Append fld
+
+    ' --- IsVerified (Yes/No) ---
+    Set fld = td.CreateField("IsVerified", dbBoolean)
+    fld.Required = True
+    fld.DefaultValue = "False"
+    td.Fields.Append fld
+
+    ' --- Primary Key ---
+    Set idx = td.CreateIndex("PrimaryKey")
+    idx.Primary = True
+    idx.Unique = True
+    idx.Required = True
+    Set fld = idx.CreateField("DrawingID")
+    idx.Fields.Append fld
+    td.Indexes.Append idx
+
+    ' --- Unique Index on DrawDate ---
+    Set idx = td.CreateIndex("DrawDate")
+    idx.Unique = True
+    idx.Required = True
+    Set fld = idx.CreateField("DrawDate")
+    idx.Fields.Append fld
+    td.Indexes.Append idx
+
+    ' Append table to database
+    db.TableDefs.Append td
+    db.TableDefs.Refresh
+
+    ' --- Set custom properties ---
+    Set td = db.TableDefs("tblDrawings")
+
+    Set fld = td.Fields("DrawingID")
+    SetFieldProperty fld, "Description", dbText, "Auto-generated drawing identifier"
+    SetFieldProperty fld, "Caption", dbText, "Drawing ID"
+
+    Set fld = td.Fields("DrawDate")
+    SetFieldProperty fld, "Description", dbText, _
+        "Official draw date. Must be Mon, Wed, or Sat"
+    SetFieldProperty fld, "Caption", dbText, "Draw Date"
+    SetFieldProperty fld, "Format", dbText, "Short Date"
+    SetFieldProperty fld, "InputMask", dbText, "99/99/0000;0;_"
+
+    For i = 1 To 5
+        Set fld = td.Fields("WB" & i)
+        SetFieldProperty fld, "Description", dbText, "Winning white ball " & i
+        SetFieldProperty fld, "Caption", dbText, "WB " & i
+        SetFieldProperty fld, "DecimalPlaces", dbByte, 0
+    Next i
+
+    Set fld = td.Fields("PB")
+    SetFieldProperty fld, "Description", dbText, "Winning Powerball number"
+    SetFieldProperty fld, "Caption", dbText, "Powerball"
+    SetFieldProperty fld, "DecimalPlaces", dbByte, 0
+
+    Set fld = td.Fields("JackpotAmount")
+    SetFieldProperty fld, "Description", dbText, _
+        "Estimated or actual jackpot for this drawing"
+    SetFieldProperty fld, "Caption", dbText, "Jackpot Amount"
+    SetFieldProperty fld, "Format", dbText, "Currency"
+    SetFieldProperty fld, "DecimalPlaces", dbByte, 2
+
+    Set fld = td.Fields("IsVerified")
+    SetFieldProperty fld, "Description", dbText, _
+        "Whether results have been officially confirmed"
+    SetFieldProperty fld, "Caption", dbText, "Verified"
+    SetFieldProperty fld, "Format", dbText, "Yes/No"
+
+    Debug.Print "Table tblDrawings created successfully."
+
+Exit_Procedure:
+    Set fld = Nothing
+    Set idx = Nothing
+    Set td = Nothing
+    Set db = Nothing
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "An error occurred in: CreateTable_tblDrawings" & vbCrLf & vbCrLf & _
+           "Error #: " & Err.Number & vbCrLf & _
+           "Description: " & Err.Description, _
+           vbCritical, APP_TITLE
+    Resume Exit_Procedure
+End Sub
+
+'---------------------------------------------------------------------------------------
+' Name       : CreateTable_tblTickets
+' Purpose    : Create the tblTickets table for pool ticket entries
+' Parameters : None
+' Returns    : None
+'---------------------------------------------------------------------------------------
+Private Sub CreateTable_tblTickets()
+    On Error GoTo ErrorHandler
+
+    If TableExists("tblTickets") Then
+        Debug.Print "Table tblTickets already exists - skipped."
+        Exit Sub
+    End If
+
+    Dim db As DAO.Database
+    Dim td As DAO.TableDef
+    Dim fld As DAO.Field
+    Dim idx As DAO.Index
+
+    Set db = CurrentDb()
+    Set td = db.CreateTableDef("tblTickets")
+
+    ' --- TicketID (AutoNumber PK) ---
+    Set fld = td.CreateField("TicketID", dbLong)
+    fld.Attributes = dbAutoIncrField
+    fld.Required = True
+    td.Fields.Append fld
+
+    ' --- DrawingID (Long — FK to tblDrawings.DrawingID) ---
+    Set fld = td.CreateField("DrawingID", dbLong)
+    fld.Required = True
+    td.Fields.Append fld
+
+    ' --- WB1 through WB5 (Integer, 1-69) ---
+    Dim i As Integer
+    For i = 1 To 5
+        Set fld = td.CreateField("WB" & i, dbInteger)
+        fld.Required = True
+        fld.ValidationRule = ">=1 And <=69"
+        fld.ValidationText = "White ball must be between 1 and 69."
+        td.Fields.Append fld
+    Next i
+
+    ' --- PB (Integer, 1-26) ---
+    Set fld = td.CreateField("PB", dbInteger)
+    fld.Required = True
+    fld.ValidationRule = ">=1 And <=26"
+    fld.ValidationText = "Powerball must be between 1 and 26."
+    td.Fields.Append fld
+
+    ' --- IsPowerPlay (Yes/No) ---
+    Set fld = td.CreateField("IsPowerPlay", dbBoolean)
+    fld.Required = True
+    fld.DefaultValue = "False"
+    td.Fields.Append fld
+
+    ' --- IsDoublePlay (Yes/No) ---
+    Set fld = td.CreateField("IsDoublePlay", dbBoolean)
+    fld.Required = True
+    fld.DefaultValue = "False"
+    td.Fields.Append fld
+
+    ' --- Primary Key ---
+    Set idx = td.CreateIndex("PrimaryKey")
+    idx.Primary = True
+    idx.Unique = True
+    idx.Required = True
+    Set fld = idx.CreateField("TicketID")
+    idx.Fields.Append fld
+    td.Indexes.Append idx
+
+    ' --- Index on DrawingID (Duplicates OK) ---
+    Set idx = td.CreateIndex("DrawingID")
+    idx.Unique = False
+    Set fld = idx.CreateField("DrawingID")
+    idx.Fields.Append fld
+    td.Indexes.Append idx
+
+    ' Append table to database
+    db.TableDefs.Append td
+    db.TableDefs.Refresh
+
+    ' --- Set custom properties ---
+    Set td = db.TableDefs("tblTickets")
+
+    Set fld = td.Fields("TicketID")
+    SetFieldProperty fld, "Description", dbText, "Auto-generated ticket identifier"
+    SetFieldProperty fld, "Caption", dbText, "Ticket ID"
+
+    Set fld = td.Fields("DrawingID")
+    SetFieldProperty fld, "Description", dbText, "Foreign Key to tblDrawings.DrawingID"
+    SetFieldProperty fld, "Caption", dbText, "Drawing ID"
+    SetFieldProperty fld, "DecimalPlaces", dbByte, 0
+
+    For i = 1 To 5
+        Set fld = td.Fields("WB" & i)
+        SetFieldProperty fld, "Description", dbText, "White ball " & i
+        SetFieldProperty fld, "Caption", dbText, "WB " & i
+        SetFieldProperty fld, "DecimalPlaces", dbByte, 0
+    Next i
+
+    Set fld = td.Fields("PB")
+    SetFieldProperty fld, "Description", dbText, "Powerball"
+    SetFieldProperty fld, "Caption", dbText, "Powerball"
+    SetFieldProperty fld, "DecimalPlaces", dbByte, 0
+
+    Set fld = td.Fields("IsPowerPlay")
+    SetFieldProperty fld, "Description", dbText, _
+        "Whether this ticket includes Power Play"
+    SetFieldProperty fld, "Caption", dbText, "Power Play"
+    SetFieldProperty fld, "Format", dbText, "Yes/No"
+
+    Set fld = td.Fields("IsDoublePlay")
+    SetFieldProperty fld, "Description", dbText, _
+        "Whether this ticket includes Double Play"
+    SetFieldProperty fld, "Caption", dbText, "Double Play"
+    SetFieldProperty fld, "Format", dbText, "Yes/No"
+
+    Debug.Print "Table tblTickets created successfully."
+
+Exit_Procedure:
+    Set fld = Nothing
+    Set idx = Nothing
+    Set td = Nothing
+    Set db = Nothing
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "An error occurred in: CreateTable_tblTickets" & vbCrLf & vbCrLf & _
+           "Error #: " & Err.Number & vbCrLf & _
+           "Description: " & Err.Description, _
+           vbCritical, APP_TITLE
+    Resume Exit_Procedure
+End Sub
+
+'---------------------------------------------------------------------------------------
+' Name       : CreateTable_tblContributions
+' Purpose    : Create the tblContributions table for participant payments
+' Parameters : None
+' Returns    : None
+'---------------------------------------------------------------------------------------
+Private Sub CreateTable_tblContributions()
+    On Error GoTo ErrorHandler
+
+    If TableExists("tblContributions") Then
+        Debug.Print "Table tblContributions already exists - skipped."
+        Exit Sub
+    End If
+
+    Dim db As DAO.Database
+    Dim td As DAO.TableDef
+    Dim fld As DAO.Field
+    Dim idx As DAO.Index
+
+    Set db = CurrentDb()
+    Set td = db.CreateTableDef("tblContributions")
+
+    ' --- ContributionID (AutoNumber PK) ---
+    Set fld = td.CreateField("ContributionID", dbLong)
+    fld.Attributes = dbAutoIncrField
+    fld.Required = True
+    td.Fields.Append fld
+
+    ' --- ParticipantID (Long — FK to tblParticipants.ParticipantID) ---
+    Set fld = td.CreateField("ParticipantID", dbLong)
+    fld.Required = True
+    td.Fields.Append fld
+
+    ' --- DrawingID (Long — FK to tblDrawings.DrawingID) ---
+    Set fld = td.CreateField("DrawingID", dbLong)
+    fld.Required = True
+    td.Fields.Append fld
+
+    ' --- AmountPaid (Currency) ---
+    Set fld = td.CreateField("AmountPaid", dbCurrency)
+    fld.Required = True
+    fld.ValidationRule = ">0"
+    fld.ValidationText = "Amount paid must be greater than zero."
+    td.Fields.Append fld
+
+    ' --- DatePaid (Date/Time) ---
+    Set fld = td.CreateField("DatePaid", dbDate)
+    fld.Required = True
+    fld.DefaultValue = "=Date()"
+    td.Fields.Append fld
+
+    ' --- Primary Key ---
+    Set idx = td.CreateIndex("PrimaryKey")
+    idx.Primary = True
+    idx.Unique = True
+    idx.Required = True
+    Set fld = idx.CreateField("ContributionID")
+    idx.Fields.Append fld
+    td.Indexes.Append idx
+
+    ' --- Index on ParticipantID (Duplicates OK) ---
+    Set idx = td.CreateIndex("ParticipantID")
+    idx.Unique = False
+    Set fld = idx.CreateField("ParticipantID")
+    idx.Fields.Append fld
+    td.Indexes.Append idx
+
+    ' --- Index on DrawingID (Duplicates OK) ---
+    Set idx = td.CreateIndex("DrawingID")
+    idx.Unique = False
+    Set fld = idx.CreateField("DrawingID")
+    idx.Fields.Append fld
+    td.Indexes.Append idx
+
+    ' Append table to database
+    db.TableDefs.Append td
+    db.TableDefs.Refresh
+
+    ' --- Set custom properties ---
+    Set td = db.TableDefs("tblContributions")
+
+    Set fld = td.Fields("ContributionID")
+    SetFieldProperty fld, "Description", dbText, "Auto-generated contribution identifier"
+    SetFieldProperty fld, "Caption", dbText, "Contribution ID"
+
+    Set fld = td.Fields("ParticipantID")
+    SetFieldProperty fld, "Description", dbText, "Foreign Key to tblParticipants.ParticipantID"
+    SetFieldProperty fld, "Caption", dbText, "Participant ID"
+    SetFieldProperty fld, "DecimalPlaces", dbByte, 0
+
+    Set fld = td.Fields("DrawingID")
+    SetFieldProperty fld, "Description", dbText, "Foreign Key to tblDrawings.DrawingID"
+    SetFieldProperty fld, "Caption", dbText, "Drawing ID"
+    SetFieldProperty fld, "DecimalPlaces", dbByte, 0
+
+    Set fld = td.Fields("AmountPaid")
+    SetFieldProperty fld, "Description", dbText, "Amount contributed by this participant"
+    SetFieldProperty fld, "Caption", dbText, "Amount Paid"
+    SetFieldProperty fld, "Format", dbText, "Currency"
+    SetFieldProperty fld, "DecimalPlaces", dbByte, 2
+
+    Set fld = td.Fields("DatePaid")
+    SetFieldProperty fld, "Description", dbText, "Date payment was received"
+    SetFieldProperty fld, "Caption", dbText, "Date Paid"
+    SetFieldProperty fld, "Format", dbText, "Short Date"
+    SetFieldProperty fld, "InputMask", dbText, "99/99/0000;0;_"
+
+    Debug.Print "Table tblContributions created successfully."
+
+Exit_Procedure:
+    Set fld = Nothing
+    Set idx = Nothing
+    Set td = Nothing
+    Set db = Nothing
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "An error occurred in: CreateTable_tblContributions" & vbCrLf & vbCrLf & _
+           "Error #: " & Err.Number & vbCrLf & _
+           "Description: " & Err.Description, _
+           vbCritical, APP_TITLE
+    Resume Exit_Procedure
+End Sub
+
+' ======================================================================================
+'  RELATIONSHIPS
+' ======================================================================================
+
+'---------------------------------------------------------------------------------------
+' Name       : CreateAllRelationships
+' Purpose    : Create all foreign key relationships with referential integrity
+'              and cascade updates
+' Parameters : None
+' Returns    : None
+'---------------------------------------------------------------------------------------
+Private Sub CreateAllRelationships()
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim rel As DAO.Relation
+    Dim fld As DAO.Field
+
+    Set db = CurrentDb()
+
+    ' --- tlkpStates.StateCode -> tblSystemSettings.StateOfPlay ---
+    If Not RelationExists("rel_tlkpStates_tblSystemSettings") Then
+        Set rel = db.CreateRelation("rel_tlkpStates_tblSystemSettings", _
+                                    "tlkpStates", "tblSystemSettings", _
+                                    dbRelationUpdateCascade)
+        Set fld = rel.CreateField("StateCode")
+        fld.ForeignName = "StateOfPlay"
+        rel.Fields.Append fld
+        db.Relations.Append rel
+        Debug.Print "Relationship rel_tlkpStates_tblSystemSettings created."
+    End If
+
+    ' --- tblDrawings.DrawingID -> tblTickets.DrawingID ---
+    If Not RelationExists("rel_tblDrawings_tblTickets") Then
+        Set rel = db.CreateRelation("rel_tblDrawings_tblTickets", _
+                                    "tblDrawings", "tblTickets", _
+                                    dbRelationUpdateCascade)
+        Set fld = rel.CreateField("DrawingID")
+        fld.ForeignName = "DrawingID"
+        rel.Fields.Append fld
+        db.Relations.Append rel
+        Debug.Print "Relationship rel_tblDrawings_tblTickets created."
+    End If
+
+    ' --- tblDrawings.DrawingID -> tblContributions.DrawingID ---
+    If Not RelationExists("rel_tblDrawings_tblContributions") Then
+        Set rel = db.CreateRelation("rel_tblDrawings_tblContributions", _
+                                    "tblDrawings", "tblContributions", _
+                                    dbRelationUpdateCascade)
+        Set fld = rel.CreateField("DrawingID")
+        fld.ForeignName = "DrawingID"
+        rel.Fields.Append fld
+        db.Relations.Append rel
+        Debug.Print "Relationship rel_tblDrawings_tblContributions created."
+    End If
+
+    ' --- tblParticipants.ParticipantID -> tblContributions.ParticipantID ---
+    If Not RelationExists("rel_tblParticipants_tblContributions") Then
+        Set rel = db.CreateRelation("rel_tblParticipants_tblContributions", _
+                                    "tblParticipants", "tblContributions", _
+                                    dbRelationUpdateCascade)
+        Set fld = rel.CreateField("ParticipantID")
+        fld.ForeignName = "ParticipantID"
+        rel.Fields.Append fld
+        db.Relations.Append rel
+        Debug.Print "Relationship rel_tblParticipants_tblContributions created."
+    End If
+
+Exit_Procedure:
+    Set fld = Nothing
+    Set rel = Nothing
+    Set db = Nothing
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "An error occurred in: CreateAllRelationships" & vbCrLf & vbCrLf & _
+           "Error #: " & Err.Number & vbCrLf & _
+           "Description: " & Err.Description, _
+           vbCritical, APP_TITLE
+    Resume Exit_Procedure
+End Sub
+```
+
+## Notes
+
+- **Safe to re-run.** Each procedure checks whether its table (or relationship) already exists and skips if so. Progress is printed to the Immediate Window.
+- **Additional validation.** All five white ball values (`WB1`–`WB5`) in `tblDrawings` and `tblTickets` must be distinct. This cross-field rule cannot be expressed in a table-level validation rule — enforce it via VBA in `modLotteryLogic` before saving.
+- **Table order matters.** Parent tables (`tlkpStates`, `tblDrawings`, `tblParticipants`) are created before child tables so that relationship creation succeeds.
+- **After running,** verify in **Database Tools → Relationships** that all four relationships appear with cascade-update arrows.
