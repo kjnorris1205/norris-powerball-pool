@@ -20,7 +20,7 @@ A professional-grade Microsoft Access application (.accdb) for managing Powerbal
 
 ## Database Recreation Steps
 
-To recreate the database from scratch, follow these steps in order:
+To recreate the database from scratch, follow these steps in order. Each step involves pasting a VBA module into the Access VBE and running a single command from the Immediate Window.
 
 1. **Create the database.** Open Microsoft Access → **Blank desktop database** → name it `NorrisPowerballPool.accdb` → **Create**.
 
@@ -28,9 +28,15 @@ To recreate the database from scratch, follow these steps in order:
 
 3. **Seed lookup tables.** Follow [database-seeding-instructions.md](database-seeding-instructions.md) to set up the `modSeedData` VBA module and run `SeedAllLookupTables`. This populates `tlkpStates` and `tlkpPrizeTiers` using DAO — safe to re-run (skips tables that already have data).
 
-4. **Set up the batch SQL runner (optional).** Follow [batch-sql-runner-instructions.md](batch-sql-runner-instructions.md) to set up the `modBatchSQL` utility module for running ad-hoc SQL files.
+4. **Create all queries.** Follow [query-setup-instructions.md](query-setup-instructions.md) to set up the `modQuerySetup` VBA module and run `CreateAllQueries`. This creates the match-checking and reporting queries using DAO — safe to re-run (skips queries that already exist).
 
-5. **Create startup configuration.** Create an **AutoExec macro** (`mcrAutoExec`) that calls `modStartup.InitializeApp` on database open. This procedure loads `tblSystemSettings` values into public variables for use throughout the application.
+5. **Paste the lottery logic module.** Follow [logic-setup-instructions.md](logic-setup-instructions.md) to set up the `modLotteryLogic` VBA module. This provides validation and matching functions used at runtime — no command to run.
+
+6. **Create all forms.** Follow [form-setup-instructions.md](form-setup-instructions.md) to set up three VBA modules (`modUIConstants`, `modFormEvents`, `modFormSetup`) and run `CreateAllForms`. This creates the dashboard, settings, participants, ticket entry, draw results, and match results forms — safe to re-run (skips forms that already exist).
+
+7. **Configure startup.** Follow [startup-setup-instructions.md](startup-setup-instructions.md) to set up the `modStartup` VBA module and run `ConfigureStartup`. This sets the startup form, application title, and hides the navigation pane. The dashboard's `OnOpen` event calls `InitializeApp` to load global settings.
+
+8. **Set up the batch SQL runner (optional).** Follow [batch-sql-runner-instructions.md](batch-sql-runner-instructions.md) to set up the `modBatchSQL` utility module for running ad-hoc SQL files.
 
 ---
 
