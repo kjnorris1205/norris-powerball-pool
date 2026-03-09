@@ -128,19 +128,32 @@ ErrorHandler:
 End Function
 
 '---------------------------------------------------------------------------------------
-' Name       : SaveAndCloseForm
-' Purpose    : Save the current record and close the active form
+' Name       : SaveSettingsAndCloseForm
+' Purpose    : Save settings, update globals and dashboard, then close form
 ' Parameters : None
 ' Returns    : Variant
 '---------------------------------------------------------------------------------------
-Public Function SaveAndCloseForm() As Variant
+Public Function SaveSettingsAndCloseForm() As Variant
     On Error GoTo ErrorHandler
+
     DoCmd.RunCommand acCmdSaveRecord
-    DoCmd.Close acForm, Screen.ActiveForm.Name
+
+    ' Reload global settings from the saved record
+    gstrPoolName = Nz(Forms!frmSettings!txtPoolName, "")
+    gstrAdminName = Nz(Forms!frmSettings!txtAdminName, "")
+    gstrStateOfPlay = Nz(Forms!frmSettings!cboStateOfPlay, "")
+
+    ' Refresh the dashboard subtitle if it is open
+    If CurrentProject.AllForms("frmMainDashboard").IsLoaded Then
+        Forms!frmMainDashboard!txtSubtitle.Requery
+    End If
+
+    DoCmd.Close acForm, "frmSettings"
+
 Exit_Function:
     Exit Function
 ErrorHandler:
-    MsgBox "An error occurred in: SaveAndCloseForm" & vbCrLf & vbCrLf & _
+    MsgBox "An error occurred in: SaveSettingsAndCloseForm" & vbCrLf & vbCrLf & _
            "Error #: " & Err.Number & vbCrLf & _
            "Description: " & Err.Description, _
            vbCritical, APP_TITLE

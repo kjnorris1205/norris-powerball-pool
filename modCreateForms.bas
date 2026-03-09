@@ -323,7 +323,7 @@ Private Sub CreateForm_frmSettings()
                             2400, 2700, UI_BUTTON_WIDTH, UI_BUTTON_HEIGHT)
     ctl.Name = "cmdSaveClose"
     ctl.Caption = "Save && Close"
-    ctl.OnClick = "=SaveAndCloseForm()"
+    ctl.OnClick = "=SaveSettingsAndCloseForm()"
     StyleButton ctl
 
     ' --- Close (cancel) button ---
