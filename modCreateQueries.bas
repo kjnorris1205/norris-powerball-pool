@@ -68,6 +68,8 @@ Private Sub CreateQuery_qryMatchCheck()
     Set db = CurrentDb()
 
     strSQL = "SELECT t.TicketID, t.DrawingID, d.DrawDate, " & _
+             "t.ParticipantID, " & _
+             "pa.FirstName & ' ' & pa.LastName AS PurchasedBy, " & _
              "t.WB1, t.WB2, t.WB3, t.WB4, t.WB5, t.PB, " & _
              "t.IsPowerPlay, t.IsDoublePlay, " & _
              "IIf(t.WB1=d.WB1 Or t.WB1=d.WB2 Or t.WB1=d.WB3 Or t.WB1=d.WB4 Or t.WB1=d.WB5,1,0) + " & _
@@ -77,8 +79,9 @@ Private Sub CreateQuery_qryMatchCheck()
              "IIf(t.WB5=d.WB1 Or t.WB5=d.WB2 Or t.WB5=d.WB3 Or t.WB5=d.WB4 Or t.WB5=d.WB5,1,0) " & _
              "AS WhiteBallMatches, " & _
              "IIf(t.PB=d.PB,True,False) AS PowerballMatch " & _
-             "FROM tblTickets AS t " & _
-             "INNER JOIN tblDrawings AS d ON t.DrawingID = d.DrawingID " & _
+             "FROM (tblTickets AS t " & _
+             "INNER JOIN tblDrawings AS d ON t.DrawingID = d.DrawingID) " & _
+             "INNER JOIN tblParticipants AS pa ON t.ParticipantID = pa.ParticipantID " & _
              "WHERE d.WB1 Is Not Null AND d.WB2 Is Not Null AND d.WB3 Is Not Null " & _
              "AND d.WB4 Is Not Null AND d.WB5 Is Not Null AND d.PB Is Not Null"
 
@@ -118,6 +121,7 @@ Private Sub CreateQuery_qryWinningTickets()
     Set db = CurrentDb()
 
     strSQL = "SELECT mc.TicketID, mc.DrawingID, mc.DrawDate, " & _
+             "mc.ParticipantID, mc.PurchasedBy, " & _
              "mc.WB1, mc.WB2, mc.WB3, mc.WB4, mc.WB5, mc.PB, " & _
              "mc.IsPowerPlay, mc.IsDoublePlay, " & _
              "mc.WhiteBallMatches, mc.PowerballMatch, " & _
@@ -208,9 +212,12 @@ Private Sub CreateQuery_qryTicketsByDrawing()
 
     strSQL = "PARAMETERS [prmDrawingID] Long; " & _
              "SELECT t.TicketID, t.DrawingID, " & _
+             "t.ParticipantID, " & _
+             "pa.FirstName & ' ' & pa.LastName AS PurchasedBy, " & _
              "t.WB1, t.WB2, t.WB3, t.WB4, t.WB5, t.PB, " & _
              "t.IsPowerPlay, t.IsDoublePlay " & _
              "FROM tblTickets AS t " & _
+             "INNER JOIN tblParticipants AS pa ON t.ParticipantID = pa.ParticipantID " & _
              "WHERE t.DrawingID = [prmDrawingID] " & _
              "ORDER BY t.TicketID"
 

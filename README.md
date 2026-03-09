@@ -46,7 +46,7 @@ See [DATABASE-CREATION.md](DATABASE-CREATION.md) for complete step-by-step instr
 - Tax rates and state lottery participation should be updateable by the user.
 - The selected state in `tblSystemSettings` drives which tax rates and play options apply.
 
-## MVP Forms
+## Forms
 
 | Form Name | Purpose |
 |---|---|
@@ -57,7 +57,7 @@ See [DATABASE-CREATION.md](DATABASE-CREATION.md) for complete step-by-step instr
 | `frmDrawResults` | Enter official winning numbers for a draw date |
 | `frmMatchResults` | View match-checking results by drawing |
 
-## MVP Queries
+## Queries
 
 | Query Name | Purpose |
 |---|---|

@@ -835,6 +835,11 @@ Private Sub CreateTable_tblTickets()
     fld.Required = True
     td.Fields.Append fld
 
+    ' --- ParticipantID (Long — FK to tblParticipants.ParticipantID) ---
+    Set fld = td.CreateField("ParticipantID", dbLong)
+    fld.Required = True
+    td.Fields.Append fld
+
     ' --- WB1 through WB5 (Integer, 1-69) ---
     Dim i As Integer
     For i = 1 To 5
@@ -880,6 +885,13 @@ Private Sub CreateTable_tblTickets()
     idx.Fields.Append fld
     td.Indexes.Append idx
 
+    ' --- Index on ParticipantID (Duplicates OK) ---
+    Set idx = td.CreateIndex("ParticipantID")
+    idx.Unique = False
+    Set fld = idx.CreateField("ParticipantID")
+    idx.Fields.Append fld
+    td.Indexes.Append idx
+
     ' Append table to database
     db.TableDefs.Append td
     db.TableDefs.Refresh
@@ -894,6 +906,11 @@ Private Sub CreateTable_tblTickets()
     Set fld = td.Fields("DrawingID")
     SetFieldProperty fld, "Description", dbText, "Foreign Key to tblDrawings.DrawingID"
     SetFieldProperty fld, "Caption", dbText, "Drawing ID"
+    SetFieldProperty fld, "DecimalPlaces", dbByte, 0
+
+    Set fld = td.Fields("ParticipantID")
+    SetFieldProperty fld, "Description", dbText, "Foreign Key to tblParticipants.ParticipantID"
+    SetFieldProperty fld, "Caption", dbText, "Purchased By"
     SetFieldProperty fld, "DecimalPlaces", dbByte, 0
 
     For i = 1 To 5
@@ -1127,6 +1144,18 @@ Private Sub CreateAllRelationships()
         rel.Fields.Append fld
         db.Relations.Append rel
         Debug.Print "Relationship rel_tblParticipants_tblContributions created."
+    End If
+
+    ' --- tblParticipants.ParticipantID -> tblTickets.ParticipantID ---
+    If Not RelationExists("rel_tblParticipants_tblTickets") Then
+        Set rel = db.CreateRelation("rel_tblParticipants_tblTickets", _
+                                    "tblParticipants", "tblTickets", _
+                                    dbRelationUpdateCascade)
+        Set fld = rel.CreateField("ParticipantID")
+        fld.ForeignName = "ParticipantID"
+        rel.Fields.Append fld
+        db.Relations.Append rel
+        Debug.Print "Relationship rel_tblParticipants_tblTickets created."
     End If
 
 Exit_Procedure:

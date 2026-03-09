@@ -48,7 +48,7 @@ Follow [batch-sql-runner-instructions.md](batch-sql-runner-instructions.md) to s
 
 - **Re-running is safe.** Every setup command checks whether its objects already exist and skips them.
 - **Table order is handled automatically.** `CreateAllTables` creates parent tables before child tables so relationships succeed.
-- **Verify relationships** after running `CreateAllTables`: go to **Database Tools → Relationships** and confirm all four relationships appear.
+- **Verify relationships** after running `CreateAllTables`: go to **Database Tools → Relationships** and confirm all five relationships appear.
 - **Re-seed from scratch:** `CurrentDb.Execute "DELETE FROM tlkpStates", dbFailOnError` (same for `tlkpPrizeTiers`), then run `SeedAllLookupTables` again.
 - **Startup bypass:** After `ConfigureStartup`, hold **Shift** while opening the database to show the navigation pane and access design tools.
 
@@ -151,6 +151,7 @@ Stores pool ticket entries (purchased numbers). **One field per ball.**
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | `TicketID` | AutoNumber | **Primary Key.** Auto-generated ticket identifier | Long Integer | | | | Ticket ID | | | | Yes | Yes (No Duplicates) |
 | `DrawingID` | Number | **Foreign Key** → `tblDrawings.DrawingID` | Long Integer | | 0 | | Drawing ID | | | | Yes | Yes (Duplicates OK) |
+| `ParticipantID` | Number | **Foreign Key** → `tblParticipants.ParticipantID` | Long Integer | | 0 | | Purchased By | | | | Yes | Yes (Duplicates OK) |
 | `WB1` | Number | White ball 1 | Integer | | 0 | | WB 1 | | >=1 And <=69 | White ball must be between 1 and 69. | Yes | No |
 | `WB2` | Number | White ball 2 | Integer | | 0 | | WB 2 | | >=1 And <=69 | White ball must be between 1 and 69. | Yes | No |
 | `WB3` | Number | White ball 3 | Integer | | 0 | | WB 3 | | >=1 And <=69 | White ball must be between 1 and 69. | Yes | No |
@@ -182,3 +183,4 @@ Tracks participant payments per drawing.
 | `tblDrawings` | `DrawingID` | `tblTickets` | `DrawingID` | Yes | Yes |
 | `tblDrawings` | `DrawingID` | `tblContributions` | `DrawingID` | Yes | Yes |
 | `tblParticipants` | `ParticipantID` | `tblContributions` | `ParticipantID` | Yes | Yes |
+| `tblParticipants` | `ParticipantID` | `tblTickets` | `ParticipantID` | Yes | Yes |

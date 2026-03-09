@@ -524,7 +524,7 @@ Private Sub CreateForm_frmTicketEntry()
     frm.DividingLines = False
     frm.ScrollBars = 0
     frm.Width = 7200
-    frm.Section(acDetail).Height = 4400
+    frm.Section(acDetail).Height = 4850
     frm.Section(acDetail).BackColor = UI_COLOR_BACKGROUND
 
     ' --- Title ---
@@ -551,8 +551,26 @@ Private Sub CreateForm_frmTicketEntry()
     StyleTextBox ctl
     HideAttachedLabel ctl
 
+    ' --- Purchased By combo ---
+    Set ctl = CreateControl(strName, acLabel, acDetail, , , 300, 1350, 2000, UI_TEXTBOX_HEIGHT)
+    ctl.Name = "lblPurchasedBy"
+    ctl.Caption = "Purchased By:"
+    StyleLabel ctl, UI_FONT_SIZE_BODY, False, UI_COLOR_TEXT
+
+    Set ctl = CreateControl(strName, acComboBox, acDetail, , , 2400, 1350, 4200, UI_TEXTBOX_HEIGHT)
+    ctl.Name = "cboPurchasedBy"
+    ctl.ControlSource = "ParticipantID"
+    ctl.RowSourceType = "Table/Query"
+    ctl.RowSource = "SELECT ParticipantID, FirstName & ' ' & LastName AS FullName FROM tblParticipants WHERE IsActive = True ORDER BY LastName, FirstName"
+    ctl.ColumnCount = 2
+    ctl.ColumnWidths = "0;4100"
+    ctl.BoundColumn = 1
+    ctl.LimitToList = True
+    StyleTextBox ctl
+    HideAttachedLabel ctl
+
     ' --- White Balls label ---
-    Set ctl = CreateControl(strName, acLabel, acDetail, , , 300, 1500, 6600, 300)
+    Set ctl = CreateControl(strName, acLabel, acDetail, , , 300, 1950, 6600, 300)
     ctl.Name = "lblWhiteBalls"
     ctl.Caption = "White Balls (1-69):"
     StyleLabel ctl, UI_FONT_SIZE_BODY, False, UI_COLOR_TEXT
@@ -561,7 +579,7 @@ Private Sub CreateForm_frmTicketEntry()
     lngBallLeft = 300
     For i = 1 To 5
         Set ctl = CreateControl(strName, acTextBox, acDetail, , , _
-                                lngBallLeft, 1900, 1000, UI_TEXTBOX_HEIGHT)
+                                lngBallLeft, 2350, 1000, UI_TEXTBOX_HEIGHT)
         ctl.Name = "txtWB" & i
         ctl.ControlSource = "WB" & i
         StyleTextBox ctl
@@ -571,12 +589,12 @@ Private Sub CreateForm_frmTicketEntry()
     Next i
 
     ' --- Powerball ---
-    Set ctl = CreateControl(strName, acLabel, acDetail, , , 300, 2500, 2000, UI_TEXTBOX_HEIGHT)
+    Set ctl = CreateControl(strName, acLabel, acDetail, , , 300, 2950, 2000, UI_TEXTBOX_HEIGHT)
     ctl.Name = "lblPB"
     ctl.Caption = "Powerball (1-26):"
     StyleLabel ctl, UI_FONT_SIZE_BODY, False, UI_COLOR_TEXT
 
-    Set ctl = CreateControl(strName, acTextBox, acDetail, , , 2400, 2500, 1000, UI_TEXTBOX_HEIGHT)
+    Set ctl = CreateControl(strName, acTextBox, acDetail, , , 2400, 2950, 1000, UI_TEXTBOX_HEIGHT)
     ctl.Name = "txtPB"
     ctl.ControlSource = "PB"
     StyleTextBox ctl
@@ -584,44 +602,44 @@ Private Sub CreateForm_frmTicketEntry()
     HideAttachedLabel ctl
 
     ' --- Power Play checkbox ---
-    Set ctl = CreateControl(strName, acCheckBox, acDetail, , , 300, 3100, 300, 300)
+    Set ctl = CreateControl(strName, acCheckBox, acDetail, , , 300, 3550, 300, 300)
     ctl.Name = "chkPowerPlay"
     ctl.ControlSource = "IsPowerPlay"
     HideAttachedLabel ctl
 
-    Set ctl = CreateControl(strName, acLabel, acDetail, , , 700, 3100, 1800, 300)
+    Set ctl = CreateControl(strName, acLabel, acDetail, , , 700, 3550, 1800, 300)
     ctl.Name = "lblPowerPlay"
     ctl.Caption = "Power Play"
     StyleLabel ctl, UI_FONT_SIZE_BODY, False, UI_COLOR_TEXT
 
     ' --- Double Play checkbox ---
-    Set ctl = CreateControl(strName, acCheckBox, acDetail, , , 2800, 3100, 300, 300)
+    Set ctl = CreateControl(strName, acCheckBox, acDetail, , , 2800, 3550, 300, 300)
     ctl.Name = "chkDoublePlay"
     ctl.ControlSource = "IsDoublePlay"
     HideAttachedLabel ctl
 
-    Set ctl = CreateControl(strName, acLabel, acDetail, , , 3200, 3100, 1800, 300)
+    Set ctl = CreateControl(strName, acLabel, acDetail, , , 3200, 3550, 1800, 300)
     ctl.Name = "lblDoublePlay"
     ctl.Caption = "Double Play"
     StyleLabel ctl, UI_FONT_SIZE_BODY, False, UI_COLOR_TEXT
 
     ' --- Buttons ---
     Set ctl = CreateControl(strName, acCommandButton, acDetail, , , _
-                            300, 3750, UI_BUTTON_WIDTH, UI_BUTTON_HEIGHT)
+                            300, 4200, UI_BUTTON_WIDTH, UI_BUTTON_HEIGHT)
     ctl.Name = "cmdNew"
     ctl.Caption = "New Ticket"
     ctl.OnClick = "=GoToNewRecord()"
     StyleButton ctl
 
     Set ctl = CreateControl(strName, acCommandButton, acDetail, , , _
-                            2850, 3750, UI_BUTTON_WIDTH, UI_BUTTON_HEIGHT)
+                            2850, 4200, UI_BUTTON_WIDTH, UI_BUTTON_HEIGHT)
     ctl.Name = "cmdDelete"
     ctl.Caption = "Delete Ticket"
     ctl.OnClick = "=DeleteCurrentRecord()"
     StyleButton ctl
 
     Set ctl = CreateControl(strName, acCommandButton, acDetail, , , _
-                            5400, 3750, 1500, UI_BUTTON_HEIGHT)
+                            5400, 4200, 1500, UI_BUTTON_HEIGHT)
     ctl.Name = "cmdClose"
     ctl.Caption = "Close"
     ctl.OnClick = "=CloseCurrentForm()"
@@ -878,6 +896,7 @@ Private Sub CreateForm_frmMatchResults()
 
     ' --- Results listbox ---
     strRowSource = "SELECT wt.TicketID, " & _
+                   "wt.PurchasedBy AS [Purchased By], " & _
                    "wt.WB1 & '-' & wt.WB2 & '-' & wt.WB3 & '-' & wt.WB4 & '-' & wt.WB5 AS [White Balls], " & _
                    "wt.PB AS [PB], " & _
                    "wt.WhiteBallMatches AS [WB Matches], " & _
@@ -892,8 +911,8 @@ Private Sub CreateForm_frmMatchResults()
     ctl.Name = "lstResults"
     ctl.RowSourceType = "Table/Query"
     ctl.RowSource = strRowSource
-    ctl.ColumnCount = 7
-    ctl.ColumnWidths = "700;2200;600;900;800;1800;1200"
+    ctl.ColumnCount = 8
+    ctl.ColumnWidths = "700;1800;2200;600;900;800;1400;1200"
     ctl.ColumnHeads = True
     ctl.FontName = UI_FONT_NAME
     ctl.FontSize = UI_FONT_SIZE_BODY
