@@ -1,4 +1,4 @@
-Attribute VB_Name = "modSeedData"
+Attribute VB_Name = "modCreateSeedData"
 Option Compare Database
 Option Explicit
 

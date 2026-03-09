@@ -1,4 +1,4 @@
-Attribute VB_Name = "modQuerySetup"
+Attribute VB_Name = "modCreateQueries"
 Option Compare Database
 Option Explicit
 
@@ -164,9 +164,8 @@ Private Sub CreateQuery_qryUnpaidParticipants()
              "SELECT p.ParticipantID, p.FirstName, p.LastName, " & _
              "p.Email, p.Phone " & _
              "FROM tblParticipants AS p " & _
-             "LEFT JOIN tblContributions AS c " & _
+             "LEFT JOIN (SELECT ContributionID, ParticipantID FROM tblContributions WHERE DrawingID = [prmDrawingID]) AS c " & _
              "ON p.ParticipantID = c.ParticipantID " & _
-             "AND c.DrawingID = [prmDrawingID] " & _
              "WHERE p.IsActive = True " & _
              "AND c.ContributionID Is Null " & _
              "ORDER BY p.LastName, p.FirstName"

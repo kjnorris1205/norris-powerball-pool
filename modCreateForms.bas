@@ -1,4 +1,4 @@
-Attribute VB_Name = "modFormSetup"
+Attribute VB_Name = "modCreateForms"
 Option Compare Database
 Option Explicit
 

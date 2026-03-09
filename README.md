@@ -34,13 +34,13 @@ All `.bas` files can be imported directly into the VBA editor — no copy-paste 
 2. Go to **File** → **Import File…** (or press **Ctrl+M**).
 3. Navigate to the folder containing the `.bas` files.
 4. Select and import each of the following files (you can repeat File → Import File for each one):
-   - `modTableSetup.bas`
-   - `modSeedData.bas`
-   - `modQuerySetup.bas`
+   - `modCreateTables.bas`
+   - `modCreateSeedData.bas`
+   - `modCreateQueries.bas`
    - `modLotteryLogic.bas`
    - `modUIConstants.bas`
    - `modFormEvents.bas`
-   - `modFormSetup.bas`
+   - `modCreateForms.bas`
    - `modStartup.bas`
 5. Press **Ctrl+S** to save.
 
@@ -78,20 +78,20 @@ Follow [batch-sql-runner-instructions.md](batch-sql-runner-instructions.md) to s
 
 | File | Module Name | Purpose |
 |---|---|---|
-| `modTableSetup.bas` | `modTableSetup` | Create all tables and relationships via DAO |
-| `modSeedData.bas` | `modSeedData` | Seed lookup tables with default data |
-| `modQuerySetup.bas` | `modQuerySetup` | Create all MVP queries via DAO |
+| `modCreateTables.bas` | `modCreateTables` | Create all tables and relationships via DAO |
+| `modCreateSeedData.bas` | `modCreateSeedData` | Seed lookup tables with default data |
+| `modCreateQueries.bas` | `modCreateQueries` | Create all MVP queries via DAO |
 | `modLotteryLogic.bas` | `modLotteryLogic` | Runtime validation and match-checking logic |
 | `modUIConstants.bas` | `modUIConstants` | UI color, font, and layout constants |
 | `modFormEvents.bas` | `modFormEvents` | Navigation and form event handler functions |
-| `modFormSetup.bas` | `modFormSetup` | Programmatic form creation via DAO |
+| `modCreateForms.bas` | `modCreateForms` | Programmatic form creation via DAO |
 | `modStartup.bas` | `modStartup` | App initialization and startup configuration |
 
 ---
 
 ## Table Schema Reference
 
-Complete field specifications for every table. The DAO code in `modTableSetup.bas` implements these schemas exactly.
+Complete field specifications for every table. The DAO code in `modCreateTables.bas` implements these schemas exactly.
 
 ### 1. Lookup / Reference Tables
 

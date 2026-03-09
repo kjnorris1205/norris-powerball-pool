@@ -1,4 +1,4 @@
-Attribute VB_Name = "modTableSetup"
+Attribute VB_Name = "modCreateTables"
 Option Compare Database
 Option Explicit
 
