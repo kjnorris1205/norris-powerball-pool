@@ -78,7 +78,9 @@ Private Sub CreateQuery_qryMatchCheck()
              "AS WhiteBallMatches, " & _
              "IIf(t.PB=d.PB,True,False) AS PowerballMatch " & _
              "FROM tblTickets AS t " & _
-             "INNER JOIN tblDrawings AS d ON t.DrawingID = d.DrawingID"
+             "INNER JOIN tblDrawings AS d ON t.DrawingID = d.DrawingID " & _
+             "WHERE d.WB1 Is Not Null AND d.WB2 Is Not Null AND d.WB3 Is Not Null " & _
+             "AND d.WB4 Is Not Null AND d.WB5 Is Not Null AND d.PB Is Not Null"
 
     db.CreateQueryDef "qryMatchCheck", strSQL
     Debug.Print "Query qryMatchCheck created successfully."

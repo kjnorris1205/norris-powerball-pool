@@ -694,20 +694,20 @@ Private Sub CreateTable_tblDrawings()
     fld.ValidationText = "Draw date must be a Monday, Wednesday, or Saturday."
     td.Fields.Append fld
 
-    ' --- WB1 through WB5 (Integer, 1-69) ---
+    ' --- WB1 through WB5 (Integer, 1-69) — optional for future draws ---
     Dim i As Integer
     For i = 1 To 5
         Set fld = td.CreateField("WB" & i, dbInteger)
-        fld.Required = True
-        fld.ValidationRule = ">=1 And <=69"
+        fld.Required = False
+        fld.ValidationRule = "Is Null Or (>=1 And <=69)"
         fld.ValidationText = "White ball must be between 1 and 69."
         td.Fields.Append fld
     Next i
 
-    ' --- PB (Integer, 1-26) ---
+    ' --- PB (Integer, 1-26) — optional for future draws ---
     Set fld = td.CreateField("PB", dbInteger)
-    fld.Required = True
-    fld.ValidationRule = ">=1 And <=26"
+    fld.Required = False
+    fld.ValidationRule = "Is Null Or (>=1 And <=26)"
     fld.ValidationText = "Powerball must be between 1 and 26."
     td.Fields.Append fld
 
