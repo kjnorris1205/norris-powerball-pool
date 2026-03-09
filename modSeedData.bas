@@ -1,22 +1,4 @@
-# Database Seeding Instructions
-
-Populate the lookup tables (`tlkpStates` and `tlkpPrizeTiers`) with default data using DAO. Tables must already exist — run `CreateAllTables` from [database-setup-instructions.md](database-setup-instructions.md) first.
-
-## Setup Steps
-
-1. Open `NorrisPowerballPool.accdb` in Microsoft Access.
-2. Press **Alt+F11** to open the VBA editor.
-3. Go to **Insert** → **Module**. A new module window opens.
-4. Copy the entire VBA code block below and paste it into the new module.
-5. In the **Properties** window (press **F4** if not visible), change the module `(Name)` to `modSeedData`.
-6. Press **Ctrl+S** to save.
-7. Press **Ctrl+G** to open the **Immediate Window**.
-8. Type `SeedAllLookupTables` and press **Enter**.
-9. A confirmation message appears when seeding is complete (or reports which tables were skipped because they already contain data).
-
-## VBA Code: `modSeedData`
-
-```vb
+Attribute VB_Name = "modSeedData"
 Option Compare Database
 Option Explicit
 
@@ -262,10 +244,3 @@ ErrorHandler:
     Debug.Print SeedPrizeTiers
     Resume Exit_Function
 End Function
-```
-
-## Notes
-
-- **Safe to re-run.** Each seed function checks whether its table already contains records and skips if so. No duplicates will be created.
-- **To re-seed from scratch,** first clear the table: `CurrentDb.Execute "DELETE FROM tlkpStates", dbFailOnError` (same for `tlkpPrizeTiers`), then run `SeedAllLookupTables` again.
-- **Data review:** After seeding, open each table in Datasheet View to verify the data looks correct. Pay attention to `FederalTaxRate`, `StateTaxRate`, and the play-option flags.

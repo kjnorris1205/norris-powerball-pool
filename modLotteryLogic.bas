@@ -1,21 +1,4 @@
-# Logic Setup Instructions
-
-Set up the core business logic module used at runtime for ticket validation and match checking. This module is referenced by form event handlers and can be called from the Immediate Window for testing.
-
-## Setup Steps
-
-1. Open `NorrisPowerballPool.accdb` in Microsoft Access.
-2. Press **Alt+F11** to open the VBA editor.
-3. Go to **Insert** → **Module**. A new module window opens.
-4. Copy the entire VBA code block below and paste it into the new module.
-5. In the **Properties** window (press **F4** if not visible), change the module `(Name)` to `modLotteryLogic`.
-6. Press **Ctrl+S** to save.
-
-No command to run — this module provides functions used at runtime by forms and other modules.
-
-## VBA Code: `modLotteryLogic`
-
-```vb
+Attribute VB_Name = "modLotteryLogic"
 Option Compare Database
 Option Explicit
 
@@ -253,11 +236,3 @@ ErrorHandler:
     GetPrizeAmount = 0
     Resume Exit_Function
 End Function
-```
-
-## Notes
-
-- **No command to run.** This module provides public functions and constants used at runtime by forms and other modules.
-- **Constants** (`MAX_WHITE_BALLS`, `MAX_WHITE_BALL`, `MAX_POWERBALL`, etc.) replace magic numbers throughout the application.
-- **GetPrizeTierName / GetPrizeAmount** use internal integer/boolean values (not user input) in their SQL, so direct value substitution is safe here.
-- **ValidateTicketNumbers** is a one-stop validation function that checks range and uniqueness, returning a descriptive error message on failure.

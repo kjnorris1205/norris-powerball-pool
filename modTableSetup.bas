@@ -1,26 +1,4 @@
-# Database Setup Instructions
-
-Create all tables and relationships programmatically using DAO. No manual property setting required.
-
-## Prerequisites
-
-- A blank Access database named `NorrisPowerballPool.accdb` (or an existing one with no tables yet).
-- Open the database in Microsoft Access 2016+ or Microsoft 365.
-
-## Setup Steps
-
-1. Press **Alt+F11** to open the VBA editor.
-2. Go to **Insert** → **Module**. A new module window opens.
-3. Copy the entire VBA code block below and paste it into the new module.
-4. In the **Properties** window (press **F4** if not visible), change the module `(Name)` to `modTableSetup`.
-5. Press **Ctrl+S** to save.
-6. Press **Ctrl+G** to open the **Immediate Window**.
-7. Type `CreateAllTables` and press **Enter**.
-8. A confirmation message appears when all tables and relationships have been created.
-
-## VBA Code: `modTableSetup`
-
-```vb
+Attribute VB_Name = "modTableSetup"
 Option Compare Database
 Option Explicit
 
@@ -1164,11 +1142,3 @@ ErrorHandler:
            vbCritical, APP_TITLE
     Resume Exit_Procedure
 End Sub
-```
-
-## Notes
-
-- **Safe to re-run.** Each procedure checks whether its table (or relationship) already exists and skips if so. Progress is printed to the Immediate Window.
-- **Additional validation.** All five white ball values (`WB1`–`WB5`) in `tblDrawings` and `tblTickets` must be distinct. This cross-field rule cannot be expressed in a table-level validation rule — enforce it via VBA in `modLotteryLogic` before saving.
-- **Table order matters.** Parent tables (`tlkpStates`, `tblDrawings`, `tblParticipants`) are created before child tables so that relationship creation succeeds.
-- **After running,** verify in **Database Tools → Relationships** that all four relationships appear with cascade-update arrows.

@@ -1,22 +1,4 @@
-# Query Setup Instructions
-
-Create all MVP queries programmatically using DAO. Tables must already exist — run `CreateAllTables` from [database-setup-instructions.md](database-setup-instructions.md) first.
-
-## Setup Steps
-
-1. Open `NorrisPowerballPool.accdb` in Microsoft Access.
-2. Press **Alt+F11** to open the VBA editor.
-3. Go to **Insert** → **Module**. A new module window opens.
-4. Copy the entire VBA code block below and paste it into the new module.
-5. In the **Properties** window (press **F4** if not visible), change the module `(Name)` to `modQuerySetup`.
-6. Press **Ctrl+S** to save.
-7. Press **Ctrl+G** to open the **Immediate Window**.
-8. Type `CreateAllQueries` and press **Enter**.
-9. A confirmation message appears when all queries have been created.
-
-## VBA Code: `modQuerySetup`
-
-```vb
+Attribute VB_Name = "modQuerySetup"
 Option Compare Database
 Option Explicit
 
@@ -245,11 +227,3 @@ ErrorHandler:
            vbCritical, APP_TITLE
     Resume Exit_Procedure
 End Sub
-```
-
-## Notes
-
-- **Safe to re-run.** Each procedure checks whether its query already exists and skips if so.
-- **qryMatchCheck** compares all tickets against their linked drawings in one pass — no parameter needed since tickets are joined to drawings via the foreign key.
-- **qryWinningTickets** uses an INNER JOIN to `tlkpPrizeTiers`, which naturally filters out non-winning combinations (only prize-tier-matching rows appear).
-- **Parameterized queries** (`qryUnpaidParticipants`, `qryTicketsByDrawing`) use `PARAMETERS` declarations for safe value passing.

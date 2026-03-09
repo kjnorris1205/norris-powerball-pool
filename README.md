@@ -20,29 +20,78 @@ A professional-grade Microsoft Access application (.accdb) for managing Powerbal
 
 ## Database Recreation Steps
 
-To recreate the database from scratch, follow these steps in order. Each step involves pasting a VBA module into the Access VBE and running a single command from the Immediate Window.
+To recreate the database from scratch, follow these steps in order.
 
-1. **Create the database.** Open Microsoft Access → **Blank desktop database** → name it `NorrisPowerballPool.accdb` → **Create**.
+### Step 1: Create the Database
 
-2. **Create all tables and relationships.** Follow [database-setup-instructions.md](database-setup-instructions.md) to set up the `modTableSetup` VBA module and run `CreateAllTables`. This creates every table with all field properties, indexes, and relationships using DAO — no manual property setting required.
+Open Microsoft Access → **Blank desktop database** → name it `NorrisPowerballPool.accdb` → **Create**.
 
-3. **Seed lookup tables.** Follow [database-seeding-instructions.md](database-seeding-instructions.md) to set up the `modSeedData` VBA module and run `SeedAllLookupTables`. This populates `tlkpStates` and `tlkpPrizeTiers` using DAO — safe to re-run (skips tables that already have data).
+### Step 2: Import All VBA Modules
 
-4. **Create all queries.** Follow [query-setup-instructions.md](query-setup-instructions.md) to set up the `modQuerySetup` VBA module and run `CreateAllQueries`. This creates the match-checking and reporting queries using DAO — safe to re-run (skips queries that already exist).
+All `.bas` files can be imported directly into the VBA editor — no copy-paste or manual renaming needed.
 
-5. **Paste the lottery logic module.** Follow [logic-setup-instructions.md](logic-setup-instructions.md) to set up the `modLotteryLogic` VBA module. This provides validation and matching functions used at runtime — no command to run.
+1. Press **Alt+F11** to open the VBA editor.
+2. Go to **File** → **Import File…** (or press **Ctrl+M**).
+3. Navigate to the folder containing the `.bas` files.
+4. Select and import each of the following files (you can repeat File → Import File for each one):
+   - `modTableSetup.bas`
+   - `modSeedData.bas`
+   - `modQuerySetup.bas`
+   - `modLotteryLogic.bas`
+   - `modUIConstants.bas`
+   - `modFormEvents.bas`
+   - `modFormSetup.bas`
+   - `modStartup.bas`
+5. Press **Ctrl+S** to save.
 
-6. **Create all forms.** Follow [form-setup-instructions.md](form-setup-instructions.md) to set up three VBA modules (`modUIConstants`, `modFormEvents`, `modFormSetup`) and run `CreateAllForms`. This creates the dashboard, settings, participants, ticket entry, draw results, and match results forms — safe to re-run (skips forms that already exist).
+Each module will appear in the **Modules** folder of the Project Explorer with the correct name automatically.
 
-7. **Configure startup.** Follow [startup-setup-instructions.md](startup-setup-instructions.md) to set up the `modStartup` VBA module and run `ConfigureStartup`. This sets the startup form, application title, and hides the navigation pane. The dashboard's `OnOpen` event calls `InitializeApp` to load global settings.
+### Step 3: Run Setup Commands
 
-8. **Set up the batch SQL runner (optional).** Follow [batch-sql-runner-instructions.md](batch-sql-runner-instructions.md) to set up the `modBatchSQL` utility module for running ad-hoc SQL files.
+Open the **Immediate Window** (press **Ctrl+G**) and run these commands one at a time, in order:
+
+```
+CreateAllTables
+SeedAllLookupTables
+CreateAllQueries
+CreateAllForms
+ConfigureStartup
+```
+
+Each command prints progress to the Immediate Window and shows a confirmation message when complete. All commands are safe to re-run — they skip objects that already exist.
+
+### Step 4: Batch SQL Runner (Optional)
+
+Follow [batch-sql-runner-instructions.md](batch-sql-runner-instructions.md) to set up the `modBatchSQL` utility module for running ad-hoc SQL files.
+
+### Notes
+
+- **Re-running is safe.** Every setup command checks whether its objects already exist and skips them.
+- **Table order is handled automatically.** `CreateAllTables` creates parent tables before child tables so relationships succeed.
+- **Verify relationships** after running `CreateAllTables`: go to **Database Tools → Relationships** and confirm all four relationships appear.
+- **Re-seed from scratch:** `CurrentDb.Execute "DELETE FROM tlkpStates", dbFailOnError` (same for `tlkpPrizeTiers`), then run `SeedAllLookupTables` again.
+- **Startup bypass:** After `ConfigureStartup`, hold **Shift** while opening the database to show the navigation pane and access design tools.
+
+---
+
+## VBA Module Files
+
+| File | Module Name | Purpose |
+|---|---|---|
+| `modTableSetup.bas` | `modTableSetup` | Create all tables and relationships via DAO |
+| `modSeedData.bas` | `modSeedData` | Seed lookup tables with default data |
+| `modQuerySetup.bas` | `modQuerySetup` | Create all MVP queries via DAO |
+| `modLotteryLogic.bas` | `modLotteryLogic` | Runtime validation and match-checking logic |
+| `modUIConstants.bas` | `modUIConstants` | UI color, font, and layout constants |
+| `modFormEvents.bas` | `modFormEvents` | Navigation and form event handler functions |
+| `modFormSetup.bas` | `modFormSetup` | Programmatic form creation via DAO |
+| `modStartup.bas` | `modStartup` | App initialization and startup configuration |
 
 ---
 
 ## Table Schema Reference
 
-Complete field specifications for every table. The DAO code in [database-setup-instructions.md](database-setup-instructions.md) implements these schemas exactly.
+Complete field specifications for every table. The DAO code in `modTableSetup.bas` implements these schemas exactly.
 
 ### 1. Lookup / Reference Tables
 

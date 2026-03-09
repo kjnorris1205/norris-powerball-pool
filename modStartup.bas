@@ -1,22 +1,4 @@
-# Startup Setup Instructions
-
-Set up the application startup module that loads global settings and configures the database to open `frmMainDashboard` automatically.
-
-## Setup Steps
-
-1. Open `NorrisPowerballPool.accdb` in Microsoft Access.
-2. Press **Alt+F11** to open the VBA editor.
-3. Go to **Insert** → **Module**. A new module window opens.
-4. Copy the entire VBA code block below and paste it into the new module.
-5. In the **Properties** window (press **F4** if not visible), change the module `(Name)` to `modStartup`.
-6. Press **Ctrl+S** to save.
-7. Press **Ctrl+G** to open the **Immediate Window**.
-8. Type `ConfigureStartup` and press **Enter**.
-9. A confirmation message lists the startup settings applied.
-
-## VBA Code: `modStartup`
-
-```vb
+Attribute VB_Name = "modStartup"
 Option Compare Database
 Option Explicit
 
@@ -174,11 +156,3 @@ Private Sub SetDatabaseProperty(db As DAO.Database, _
     End If
     On Error GoTo 0
 End Sub
-```
-
-## Notes
-
-- **InitializeApp** is called automatically via the `frmMainDashboard` OnOpen event (set up by `modFormSetup`). It loads settings into public variables (`gstrPoolName`, `gstrAdminName`, `gstrStateOfPlay`) for use throughout the app.
-- **EnsureDefaultSettings** inserts a placeholder row into `tblSystemSettings` if empty, so the settings form always has a record to edit.
-- **ConfigureStartup** only needs to be run once. It sets the startup form, app title, and hides the navigation pane.
-- **To access design tools after startup is configured,** hold **Shift** while opening the database to bypass the startup form and show the navigation pane.
