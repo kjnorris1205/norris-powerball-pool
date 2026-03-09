@@ -8,6 +8,8 @@ Private Const APP_TITLE As String = "Norris Powerball Pool"
 Public gstrPoolName As String
 Public gstrAdminName As String
 Public gstrStateOfPlay As String
+Public gblnHasPowerPlay As Boolean
+Public gblnHasDoublePlay As Boolean
 
 '---------------------------------------------------------------------------------------
 ' Name       : InitializeApp
@@ -34,6 +36,31 @@ Public Function InitializeApp() As Variant
     End If
 
     rs.Close
+
+    ' Load Power Play / Double Play availability for the selected state
+    If Len(gstrStateOfPlay) > 0 Then
+        Dim qdfState As DAO.QueryDef
+        Dim rsState As DAO.Recordset
+        Set qdfState = db.CreateQueryDef("")
+        qdfState.SQL = "PARAMETERS prmStateCode Text(2); " & _
+                       "SELECT HasPowerPlay, HasDoublePlay FROM tlkpStates " & _
+                       "WHERE StateCode = prmStateCode"
+        qdfState.Parameters("prmStateCode") = gstrStateOfPlay
+        Set rsState = qdfState.OpenRecordset(dbOpenSnapshot)
+        If Not rsState.EOF Then
+            gblnHasPowerPlay = rsState!HasPowerPlay
+            gblnHasDoublePlay = rsState!HasDoublePlay
+        Else
+            gblnHasPowerPlay = False
+            gblnHasDoublePlay = False
+        End If
+        rsState.Close
+        Set rsState = Nothing
+        Set qdfState = Nothing
+    Else
+        gblnHasPowerPlay = False
+        gblnHasDoublePlay = False
+    End If
 
 Exit_Function:
     Set rs = Nothing

@@ -143,6 +143,15 @@ Public Function SaveSettingsAndCloseForm() As Variant
     gstrAdminName = Nz(Forms!frmSettings!txtAdminName, "")
     gstrStateOfPlay = Nz(Forms!frmSettings!cboStateOfPlay, "")
 
+    ' Reload Power Play / Double Play availability for the new state
+    If Len(gstrStateOfPlay) > 0 Then
+        gblnHasPowerPlay = IsStateFeatureAvailable(gstrStateOfPlay, "PowerPlay")
+        gblnHasDoublePlay = IsStateFeatureAvailable(gstrStateOfPlay, "DoublePlay")
+    Else
+        gblnHasPowerPlay = False
+        gblnHasDoublePlay = False
+    End If
+
     ' Refresh the dashboard subtitle if it is open
     If CurrentProject.AllForms("frmMainDashboard").IsLoaded Then
         Forms!frmMainDashboard!txtSubtitle.Requery
@@ -224,10 +233,12 @@ Public Function RefreshMatchResults() As Variant
 
     If IsNull(frm!cboDrawing.Value) Then
         frm!lstResults.RowSource = ""
+        frm!lstDPResults.RowSource = ""
         Exit Function
     End If
 
     frm!lstResults.Requery
+    frm!lstDPResults.Requery
 
 Exit_Function:
     Exit Function
@@ -236,5 +247,94 @@ ErrorHandler:
            "Error #: " & Err.Number & vbCrLf & _
            "Description: " & Err.Description, _
            vbCritical, APP_TITLE
+    Resume Exit_Function
+End Function
+
+' ======================================================================================
+'  POWER PLAY / DOUBLE PLAY FUNCTIONS
+' ======================================================================================
+
+'---------------------------------------------------------------------------------------
+' Name       : TogglePlayOptions
+' Purpose    : Enable or disable Power Play and Double Play checkboxes on
+'              frmTicketEntry based on the current state of play.
+'              Also unchecks disabled options to prevent stale data.
+' Parameters : None
+' Returns    : Variant
+'---------------------------------------------------------------------------------------
+Public Function TogglePlayOptions() As Variant
+    On Error GoTo ErrorHandler
+
+    Dim frm As Form
+    Set frm = Screen.ActiveForm
+
+    ' Enable/disable Power Play checkbox based on state availability
+    frm!chkPowerPlay.Enabled = gblnHasPowerPlay
+    If Not gblnHasPowerPlay Then
+        frm!chkPowerPlay.Value = False
+    End If
+
+    ' Enable/disable Double Play checkbox based on state availability
+    frm!chkDoublePlay.Enabled = gblnHasDoublePlay
+    If Not gblnHasDoublePlay Then
+        frm!chkDoublePlay.Value = False
+    End If
+
+Exit_Function:
+    Exit Function
+ErrorHandler:
+    ' Fail silently — non-critical UI toggle
+    Resume Exit_Function
+End Function
+
+'---------------------------------------------------------------------------------------
+' Name       : ValidateTicketBeforeUpdate
+' Purpose    : Validate ticket data before saving. Checks ball number ranges,
+'              uniqueness, and Power Play/Double Play state availability.
+'              Cancels the update if validation fails.
+' Parameters : None
+' Returns    : Variant
+'---------------------------------------------------------------------------------------
+Public Function ValidateTicketBeforeUpdate() As Variant
+    On Error GoTo ErrorHandler
+
+    Dim frm As Form
+    Dim strErrorMsg As String
+    Dim blnValid As Boolean
+
+    Set frm = Screen.ActiveForm
+
+    ' Validate ball numbers
+    blnValid = ValidateTicketNumbers( _
+        Nz(frm!txtWB1, 0), Nz(frm!txtWB2, 0), Nz(frm!txtWB3, 0), _
+        Nz(frm!txtWB4, 0), Nz(frm!txtWB5, 0), Nz(frm!txtPB, 0), _
+        strErrorMsg)
+
+    If Not blnValid Then
+        MsgBox strErrorMsg, vbExclamation, "Norris Powerball Pool"
+        DoCmd.CancelEvent
+        Exit Function
+    End If
+
+    ' Validate play options against state availability
+    blnValid = ValidateTicketPlayOptions( _
+        Nz(frm!chkPowerPlay, False), _
+        Nz(frm!chkDoublePlay, False), _
+        strErrorMsg)
+
+    If Not blnValid Then
+        MsgBox strErrorMsg, vbExclamation, "Norris Powerball Pool"
+        DoCmd.CancelEvent
+        Exit Function
+    End If
+
+Exit_Function:
+    Exit Function
+ErrorHandler:
+    MsgBox "An error occurred in: ValidateTicketBeforeUpdate" & vbCrLf & vbCrLf & _
+           "Error #: " & Err.Number & vbCrLf & _
+           "Description: " & Err.Description, _
+           vbCritical, "Norris Powerball Pool"
+    DoCmd.CancelEvent
     Resume Exit_Function
 End Function

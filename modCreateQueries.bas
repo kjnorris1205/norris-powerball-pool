@@ -15,6 +15,8 @@ Public Sub CreateAllQueries()
 
     CreateQuery_qryMatchCheck
     CreateQuery_qryWinningTickets
+    CreateQuery_qryDoublePlayMatchCheck
+    CreateQuery_qryDoublePlayWinningTickets
     CreateQuery_qryUnpaidParticipants
     CreateQuery_qryTicketsByDrawing
 
@@ -72,6 +74,7 @@ Private Sub CreateQuery_qryMatchCheck()
              "pa.FirstName & ' ' & pa.LastName AS PurchasedBy, " & _
              "t.WB1, t.WB2, t.WB3, t.WB4, t.WB5, t.PB, " & _
              "t.IsPowerPlay, t.IsDoublePlay, " & _
+             "d.PowerPlayMultiplier, " & _
              "IIf(t.WB1=d.WB1 Or t.WB1=d.WB2 Or t.WB1=d.WB3 Or t.WB1=d.WB4 Or t.WB1=d.WB5,1,0) + " & _
              "IIf(t.WB2=d.WB1 Or t.WB2=d.WB2 Or t.WB2=d.WB3 Or t.WB2=d.WB4 Or t.WB2=d.WB5,1,0) + " & _
              "IIf(t.WB3=d.WB1 Or t.WB3=d.WB2 Or t.WB3=d.WB3 Or t.WB3=d.WB4 Or t.WB3=d.WB5,1,0) + " & _
@@ -125,7 +128,15 @@ Private Sub CreateQuery_qryWinningTickets()
              "mc.WB1, mc.WB2, mc.WB3, mc.WB4, mc.WB5, mc.PB, " & _
              "mc.IsPowerPlay, mc.IsDoublePlay, " & _
              "mc.WhiteBallMatches, mc.PowerballMatch, " & _
-             "p.PrizeName, p.DefaultPrizeAmount " & _
+             "mc.PowerPlayMultiplier, " & _
+             "p.PrizeName, p.DefaultPrizeAmount, " & _
+             "IIf(mc.IsPowerPlay, " & _
+             "IIf(mc.WhiteBallMatches=5 And mc.PowerballMatch=False, " & _
+             "2000000, " & _
+             "IIf(mc.WhiteBallMatches=5 And mc.PowerballMatch=True, " & _
+             "p.DefaultPrizeAmount, " & _
+             "p.DefaultPrizeAmount * Nz(mc.PowerPlayMultiplier, 1))), " & _
+             "p.DefaultPrizeAmount) AS AdjustedPrizeAmount " & _
              "FROM qryMatchCheck AS mc " & _
              "INNER JOIN tlkpPrizeTiers AS p " & _
              "ON mc.WhiteBallMatches = p.WhiteBallMatches " & _
@@ -140,6 +151,104 @@ Exit_Procedure:
 
 ErrorHandler:
     MsgBox "An error occurred in: CreateQuery_qryWinningTickets" & vbCrLf & vbCrLf & _
+           "Error #: " & Err.Number & vbCrLf & _
+           "Description: " & Err.Description, _
+           vbCritical, APP_TITLE
+    Resume Exit_Procedure
+End Sub
+
+'---------------------------------------------------------------------------------------
+' Name       : CreateQuery_qryDoublePlayMatchCheck
+' Purpose    : Create query that compares ticket entries (with IsDoublePlay=True)
+'              against the Double Play drawing numbers (DPWB1-5, DPPB) in tblDrawings.
+' Parameters : None
+' Returns    : None
+'---------------------------------------------------------------------------------------
+Private Sub CreateQuery_qryDoublePlayMatchCheck()
+    On Error GoTo ErrorHandler
+
+    If QueryExists("qryDoublePlayMatchCheck") Then
+        Debug.Print "Query qryDoublePlayMatchCheck already exists - skipped."
+        Exit Sub
+    End If
+
+    Dim db As DAO.Database
+    Dim strSQL As String
+
+    Set db = CurrentDb()
+
+    strSQL = "SELECT t.TicketID, t.DrawingID, d.DrawDate, " & _
+             "t.ParticipantID, " & _
+             "pa.FirstName & ' ' & pa.LastName AS PurchasedBy, " & _
+             "t.WB1, t.WB2, t.WB3, t.WB4, t.WB5, t.PB, " & _
+             "IIf(t.WB1=d.DPWB1 Or t.WB1=d.DPWB2 Or t.WB1=d.DPWB3 Or t.WB1=d.DPWB4 Or t.WB1=d.DPWB5,1,0) + " & _
+             "IIf(t.WB2=d.DPWB1 Or t.WB2=d.DPWB2 Or t.WB2=d.DPWB3 Or t.WB2=d.DPWB4 Or t.WB2=d.DPWB5,1,0) + " & _
+             "IIf(t.WB3=d.DPWB1 Or t.WB3=d.DPWB2 Or t.WB3=d.DPWB3 Or t.WB3=d.DPWB4 Or t.WB3=d.DPWB5,1,0) + " & _
+             "IIf(t.WB4=d.DPWB1 Or t.WB4=d.DPWB2 Or t.WB4=d.DPWB3 Or t.WB4=d.DPWB4 Or t.WB4=d.DPWB5,1,0) + " & _
+             "IIf(t.WB5=d.DPWB1 Or t.WB5=d.DPWB2 Or t.WB5=d.DPWB3 Or t.WB5=d.DPWB4 Or t.WB5=d.DPWB5,1,0) " & _
+             "AS WhiteBallMatches, " & _
+             "IIf(t.PB=d.DPPB,True,False) AS PowerballMatch " & _
+             "FROM (tblTickets AS t " & _
+             "INNER JOIN tblDrawings AS d ON t.DrawingID = d.DrawingID) " & _
+             "INNER JOIN tblParticipants AS pa ON t.ParticipantID = pa.ParticipantID " & _
+             "WHERE t.IsDoublePlay = True " & _
+             "AND d.DPWB1 Is Not Null AND d.DPWB2 Is Not Null AND d.DPWB3 Is Not Null " & _
+             "AND d.DPWB4 Is Not Null AND d.DPWB5 Is Not Null AND d.DPPB Is Not Null"
+
+    db.CreateQueryDef "qryDoublePlayMatchCheck", strSQL
+    Debug.Print "Query qryDoublePlayMatchCheck created successfully."
+
+Exit_Procedure:
+    Set db = Nothing
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "An error occurred in: CreateQuery_qryDoublePlayMatchCheck" & vbCrLf & vbCrLf & _
+           "Error #: " & Err.Number & vbCrLf & _
+           "Description: " & Err.Description, _
+           vbCritical, APP_TITLE
+    Resume Exit_Procedure
+End Sub
+
+'---------------------------------------------------------------------------------------
+' Name       : CreateQuery_qryDoublePlayWinningTickets
+' Purpose    : Create query that filters qryDoublePlayMatchCheck to only rows that
+'              match a prize tier in tlkpDoublePlayPrizeTiers
+' Parameters : None
+' Returns    : None
+'---------------------------------------------------------------------------------------
+Private Sub CreateQuery_qryDoublePlayWinningTickets()
+    On Error GoTo ErrorHandler
+
+    If QueryExists("qryDoublePlayWinningTickets") Then
+        Debug.Print "Query qryDoublePlayWinningTickets already exists - skipped."
+        Exit Sub
+    End If
+
+    Dim db As DAO.Database
+    Dim strSQL As String
+
+    Set db = CurrentDb()
+
+    strSQL = "SELECT mc.TicketID, mc.DrawingID, mc.DrawDate, " & _
+             "mc.ParticipantID, mc.PurchasedBy, " & _
+             "mc.WB1, mc.WB2, mc.WB3, mc.WB4, mc.WB5, mc.PB, " & _
+             "mc.WhiteBallMatches, mc.PowerballMatch, " & _
+             "p.PrizeName, p.DefaultPrizeAmount " & _
+             "FROM qryDoublePlayMatchCheck AS mc " & _
+             "INNER JOIN tlkpDoublePlayPrizeTiers AS p " & _
+             "ON mc.WhiteBallMatches = p.WhiteBallMatches " & _
+             "AND mc.PowerballMatch = p.PowerballMatch"
+
+    db.CreateQueryDef "qryDoublePlayWinningTickets", strSQL
+    Debug.Print "Query qryDoublePlayWinningTickets created successfully."
+
+Exit_Procedure:
+    Set db = Nothing
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "An error occurred in: CreateQuery_qryDoublePlayWinningTickets" & vbCrLf & vbCrLf & _
            "Error #: " & Err.Number & vbCrLf & _
            "Description: " & Err.Description, _
            vbCritical, APP_TITLE

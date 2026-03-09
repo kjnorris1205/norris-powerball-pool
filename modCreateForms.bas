@@ -526,6 +526,9 @@ Private Sub CreateForm_frmTicketEntry()
     frm.Width = 7200
     frm.Section(acDetail).Height = 4850
     frm.Section(acDetail).BackColor = UI_COLOR_BACKGROUND
+    frm.OnOpen = "=TogglePlayOptions()"
+    frm.OnCurrent = "=TogglePlayOptions()"
+    frm.BeforeUpdate = "=ValidateTicketBeforeUpdate()"
 
     ' --- Title ---
     Set ctl = CreateControl(strName, acLabel, acDetail, , , 300, 200, 6600, 500)
@@ -700,7 +703,7 @@ Private Sub CreateForm_frmDrawResults()
     frm.DividingLines = False
     frm.ScrollBars = 0
     frm.Width = 7200
-    frm.Section(acDetail).Height = 5000
+    frm.Section(acDetail).Height = 7500
     frm.Section(acDetail).BackColor = UI_COLOR_BACKGROUND
 
     ' --- Title ---
@@ -753,46 +756,100 @@ Private Sub CreateForm_frmDrawResults()
     ctl.TextAlign = 2
     HideAttachedLabel ctl
 
-    ' --- Jackpot Amount ---
+    ' --- Power Play Multiplier ---
     Set ctl = CreateControl(strName, acLabel, acDetail, , , 300, 3100, 2000, UI_TEXTBOX_HEIGHT)
+    ctl.Name = "lblPPMultiplier"
+    ctl.Caption = "PP Multiplier:"
+    StyleLabel ctl, UI_FONT_SIZE_BODY, False, UI_COLOR_TEXT
+
+    Set ctl = CreateControl(strName, acComboBox, acDetail, , , 2400, 3100, 1200, UI_TEXTBOX_HEIGHT)
+    ctl.Name = "cboPowerPlayMultiplier"
+    ctl.ControlSource = "PowerPlayMultiplier"
+    ctl.RowSourceType = "Value List"
+    ctl.RowSource = ";2;3;4;5;10"
+    ctl.LimitToList = True
+    StyleTextBox ctl
+    ctl.TextAlign = 2
+    HideAttachedLabel ctl
+
+    ' --- Jackpot Amount ---
+    Set ctl = CreateControl(strName, acLabel, acDetail, , , 4000, 3100, 2000, UI_TEXTBOX_HEIGHT)
     ctl.Name = "lblJackpot"
     ctl.Caption = "Jackpot Amount:"
     StyleLabel ctl, UI_FONT_SIZE_BODY, False, UI_COLOR_TEXT
 
-    Set ctl = CreateControl(strName, acTextBox, acDetail, , , 2400, 3100, 2400, UI_TEXTBOX_HEIGHT)
+    Set ctl = CreateControl(strName, acTextBox, acDetail, , , 4000, 3500, 2400, UI_TEXTBOX_HEIGHT)
     ctl.Name = "txtJackpotAmount"
     ctl.ControlSource = "JackpotAmount"
     StyleTextBox ctl
     HideAttachedLabel ctl
 
+    ' --- Double Play Section ---
+    Set ctl = CreateControl(strName, acLabel, acDetail, , , 300, 4100, 6600, 400)
+    ctl.Name = "lblDPSection"
+    ctl.Caption = "Double Play Drawing"
+    StyleLabel ctl, UI_FONT_SIZE_HEADING, True, UI_COLOR_ACCENT
+
+    ' --- DP White Balls label ---
+    Set ctl = CreateControl(strName, acLabel, acDetail, , , 300, 4600, 6600, 300)
+    ctl.Name = "lblDPWhiteBalls"
+    ctl.Caption = "DP White Balls (1-69):"
+    StyleLabel ctl, UI_FONT_SIZE_BODY, False, UI_COLOR_TEXT
+
+    ' --- DPWB1 through DPWB5 ---
+    lngBallLeft = 300
+    For i = 1 To 5
+        Set ctl = CreateControl(strName, acTextBox, acDetail, , , _
+                                lngBallLeft, 5000, 1000, UI_TEXTBOX_HEIGHT)
+        ctl.Name = "txtDPWB" & i
+        ctl.ControlSource = "DPWB" & i
+        StyleTextBox ctl
+        ctl.TextAlign = 2
+        HideAttachedLabel ctl
+        lngBallLeft = lngBallLeft + 1100
+    Next i
+
+    ' --- DP Powerball ---
+    Set ctl = CreateControl(strName, acLabel, acDetail, , , 300, 5600, 2000, UI_TEXTBOX_HEIGHT)
+    ctl.Name = "lblDPPB"
+    ctl.Caption = "DP Powerball (1-26):"
+    StyleLabel ctl, UI_FONT_SIZE_BODY, False, UI_COLOR_TEXT
+
+    Set ctl = CreateControl(strName, acTextBox, acDetail, , , 2400, 5600, 1000, UI_TEXTBOX_HEIGHT)
+    ctl.Name = "txtDPPB"
+    ctl.ControlSource = "DPPB"
+    StyleTextBox ctl
+    ctl.TextAlign = 2
+    HideAttachedLabel ctl
+
     ' --- Verified checkbox ---
-    Set ctl = CreateControl(strName, acCheckBox, acDetail, , , 300, 3700, 300, 300)
+    Set ctl = CreateControl(strName, acCheckBox, acDetail, , , 300, 6200, 300, 300)
     ctl.Name = "chkVerified"
     ctl.ControlSource = "IsVerified"
     HideAttachedLabel ctl
 
-    Set ctl = CreateControl(strName, acLabel, acDetail, , , 700, 3700, 1800, 300)
+    Set ctl = CreateControl(strName, acLabel, acDetail, , , 700, 6200, 1800, 300)
     ctl.Name = "lblVerified"
     ctl.Caption = "Verified"
     StyleLabel ctl, UI_FONT_SIZE_BODY, False, UI_COLOR_TEXT
 
     ' --- Buttons ---
     Set ctl = CreateControl(strName, acCommandButton, acDetail, , , _
-                            300, 4350, UI_BUTTON_WIDTH, UI_BUTTON_HEIGHT)
+                            300, 6800, UI_BUTTON_WIDTH, UI_BUTTON_HEIGHT)
     ctl.Name = "cmdNew"
     ctl.Caption = "New Drawing"
     ctl.OnClick = "=GoToNewRecord()"
     StyleButton ctl
 
     Set ctl = CreateControl(strName, acCommandButton, acDetail, , , _
-                            2850, 4350, UI_BUTTON_WIDTH, UI_BUTTON_HEIGHT)
+                            2850, 6800, UI_BUTTON_WIDTH, UI_BUTTON_HEIGHT)
     ctl.Name = "cmdDelete"
     ctl.Caption = "Delete Drawing"
     ctl.OnClick = "=DeleteCurrentRecord()"
     StyleButton ctl
 
     Set ctl = CreateControl(strName, acCommandButton, acDetail, , , _
-                            5400, 4350, 1500, UI_BUTTON_HEIGHT)
+                            5400, 6800, 1500, UI_BUTTON_HEIGHT)
     ctl.Name = "cmdClose"
     ctl.Caption = "Close"
     ctl.OnClick = "=CloseCurrentForm()"
@@ -853,7 +910,7 @@ Private Sub CreateForm_frmMatchResults()
     frm.DividingLines = False
     frm.ScrollBars = 0
     frm.Width = 10200
-    frm.Section(acDetail).Height = 6200
+    frm.Section(acDetail).Height = 8600
     frm.Section(acDetail).BackColor = UI_COLOR_BACKGROUND
 
     ' --- Title ---
@@ -891,10 +948,10 @@ Private Sub CreateForm_frmMatchResults()
     ' --- Results label ---
     Set ctl = CreateControl(strName, acLabel, acDetail, , , 300, 1500, 9600, 300)
     ctl.Name = "lblResults"
-    ctl.Caption = "Winning Tickets:"
+    ctl.Caption = "Powerball Winning Tickets:"
     StyleLabel ctl, UI_FONT_SIZE_BODY, True, UI_COLOR_TEXT
 
-    ' --- Results listbox ---
+    ' --- Results listbox (with Power Play adjusted amount) ---
     strRowSource = "SELECT wt.TicketID, " & _
                    "wt.PurchasedBy AS [Purchased By], " & _
                    "wt.WB1 & '-' & wt.WB2 & '-' & wt.WB3 & '-' & wt.WB4 & '-' & wt.WB5 AS [White Balls], " & _
@@ -902,15 +959,48 @@ Private Sub CreateForm_frmMatchResults()
                    "wt.WhiteBallMatches AS [WB Matches], " & _
                    "IIf(wt.PowerballMatch,'Yes','No') AS [PB Match], " & _
                    "wt.PrizeName AS [Prize Tier], " & _
-                   "Format(wt.DefaultPrizeAmount,'Currency') AS [Prize] " & _
+                   "IIf(wt.IsPowerPlay,'Yes','No') AS [PP], " & _
+                   "Format(wt.AdjustedPrizeAmount,'Currency') AS [Prize] " & _
                    "FROM qryWinningTickets AS wt " & _
                    "WHERE wt.DrawingID = Nz(Forms!frmMatchResults!cboDrawing,0) " & _
-                   "ORDER BY wt.DefaultPrizeAmount DESC"
+                   "ORDER BY wt.AdjustedPrizeAmount DESC"
 
-    Set ctl = CreateControl(strName, acListBox, acDetail, , , 300, 1900, 9600, 3600)
+    Set ctl = CreateControl(strName, acListBox, acDetail, , , 300, 1900, 9600, 2800)
     ctl.Name = "lstResults"
     ctl.RowSourceType = "Table/Query"
     ctl.RowSource = strRowSource
+    ctl.ColumnCount = 9
+    ctl.ColumnWidths = "600;1600;2200;500;800;700;1400;500;1300"
+    ctl.ColumnHeads = True
+    ctl.FontName = UI_FONT_NAME
+    ctl.FontSize = UI_FONT_SIZE_BODY
+    HideAttachedLabel ctl
+
+    ' --- Double Play Results label ---
+    Dim strDPRowSource As String
+
+    Set ctl = CreateControl(strName, acLabel, acDetail, , , 300, 4900, 9600, 300)
+    ctl.Name = "lblDPResults"
+    ctl.Caption = "Double Play Winning Tickets:"
+    StyleLabel ctl, UI_FONT_SIZE_BODY, True, UI_COLOR_TEXT
+
+    ' --- Double Play Results listbox ---
+    strDPRowSource = "SELECT dp.TicketID, " & _
+                     "dp.PurchasedBy AS [Purchased By], " & _
+                     "dp.WB1 & '-' & dp.WB2 & '-' & dp.WB3 & '-' & dp.WB4 & '-' & dp.WB5 AS [White Balls], " & _
+                     "dp.PB AS [PB], " & _
+                     "dp.WhiteBallMatches AS [WB Matches], " & _
+                     "IIf(dp.PowerballMatch,'Yes','No') AS [PB Match], " & _
+                     "dp.PrizeName AS [Prize Tier], " & _
+                     "Format(dp.DefaultPrizeAmount,'Currency') AS [Prize] " & _
+                     "FROM qryDoublePlayWinningTickets AS dp " & _
+                     "WHERE dp.DrawingID = Nz(Forms!frmMatchResults!cboDrawing,0) " & _
+                     "ORDER BY dp.DefaultPrizeAmount DESC"
+
+    Set ctl = CreateControl(strName, acListBox, acDetail, , , 300, 5300, 9600, 2400)
+    ctl.Name = "lstDPResults"
+    ctl.RowSourceType = "Table/Query"
+    ctl.RowSource = strDPRowSource
     ctl.ColumnCount = 8
     ctl.ColumnWidths = "700;1800;2200;600;900;800;1400;1200"
     ctl.ColumnHeads = True
@@ -920,7 +1010,7 @@ Private Sub CreateForm_frmMatchResults()
 
     ' --- Close button ---
     Set ctl = CreateControl(strName, acCommandButton, acDetail, , , _
-                            3900, 5700, UI_BUTTON_WIDTH, UI_BUTTON_HEIGHT)
+                            3900, 7900, UI_BUTTON_WIDTH, UI_BUTTON_HEIGHT)
     ctl.Name = "cmdClose"
     ctl.Caption = "Close"
     ctl.OnClick = "=CloseCurrentForm()"

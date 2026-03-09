@@ -22,6 +22,7 @@ All `.bas` files can be imported directly into the VBA editor — no copy-paste 
    - `modFormEvents.bas`
    - `modCreateForms.bas`
    - `modStartup.bas`
+   - `modBatchSQL.bas` *(optional — developer utility for running ad-hoc SQL files)*
 5. Press **Ctrl+S** to save.
 
 Each module will appear in the **Modules** folder of the Project Explorer with the correct name automatically.
@@ -42,14 +43,25 @@ Each command prints progress to the Immediate Window and shows a confirmation me
 
 ## Step 4: Batch SQL Runner (Optional)
 
-Follow [batch-sql-runner-instructions.md](batch-sql-runner-instructions.md) to set up the `modBatchSQL` utility module for running ad-hoc SQL files.
+The `modBatchSQL` module is a developer utility for executing multiple SQL statements from a `.sql` or `.txt` file. If you imported it in Step 2, it is ready to use.
+
+**How it works:**
+- `RunSQLFromFile` opens a file-picker dialog to select a `.sql` or `.txt` file.
+- It reads the file, splits the contents on semicolons, and executes each statement via `CurrentDb.Execute` with `dbFailOnError`.
+- A summary is displayed: total statements, succeeded, failed, and failure details.
+
+**Usage:**
+1. Save your SQL statements to a `.sql` or `.txt` file (separated by semicolons).
+2. In Access, press **Alt+F11** to open the VBA editor.
+3. Press **Ctrl+G** to open the **Immediate Window**.
+4. Type `RunSQLFromFile` and press **Enter**.
 
 ## Notes
 
 - **Re-running is safe.** Every setup command checks whether its objects already exist and skips them.
 - **Table order is handled automatically.** `CreateAllTables` creates parent tables before child tables so relationships succeed.
 - **Verify relationships** after running `CreateAllTables`: go to **Database Tools → Relationships** and confirm all five relationships appear.
-- **Re-seed from scratch:** `CurrentDb.Execute "DELETE FROM tlkpStates", dbFailOnError` (same for `tlkpPrizeTiers`), then run `SeedAllLookupTables` again.
+- **Re-seed from scratch:** `CurrentDb.Execute "DELETE FROM tlkpStates", dbFailOnError` (same for `tlkpPrizeTiers` and `tlkpDoublePlayPrizeTiers`), then run `SeedAllLookupTables` again.
 - **Startup bypass:** After `ConfigureStartup`, hold **Shift** while opening the database to show the navigation pane and access design tools.
 
 ---
@@ -87,6 +99,18 @@ Defines the 9 Powerball prize tiers. Seed this table with data after creation.
 | `PowerballMatch` | Yes/No | Whether the Powerball was also matched | | Yes/No | | | Powerball Match | No | | | Yes | No |
 | `PrizeName` | Short Text | Display name (e.g., "Jackpot", "Match 4+PB") | 50 | | | | Prize Name | | | | Yes | No |
 | `DefaultPrizeAmount` | Currency | Default fixed prize amount ($0 for jackpot) | | Currency | 2 | | Default Prize Amount | 0 | >=0 | Default prize amount cannot be negative. | Yes | No |
+
+#### `tlkpDoublePlayPrizeTiers`
+
+Defines the 9 Double Play prize tiers. Seed this table with data after creation. Double Play is a separate drawing with its own prize structure (top prize $10,000,000).
+
+| Field Name | Data Type | Description | Field Size | Format | Decimal Places | Input Mask | Caption | Default Value | Validation Rule | Validation Text | Required | Indexed |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `DPPrizeTierID` | AutoNumber | **Primary Key.** Auto-generated tier identifier | Long Integer | | | | DP Prize Tier ID | | | | Yes | Yes (No Duplicates) |
+| `WhiteBallMatches` | Number | Number of white balls matched (0–5) | Integer | | | | White Ball Matches | | >=0 And <=5 | White ball matches must be between 0 and 5. | Yes | No |
+| `PowerballMatch` | Yes/No | Whether the Powerball was also matched | | Yes/No | | | Powerball Match | No | | | Yes | No |
+| `PrizeName` | Short Text | Display name (e.g., "DP Match 5+PB", "DP Match 3") | 50 | | | | Prize Name | | | | Yes | No |
+| `DefaultPrizeAmount` | Currency | Default fixed prize amount for this Double Play tier | | Currency | 2 | | Default Prize Amount | 0 | >=0 | Default prize amount cannot be negative. | Yes | No |
 
 #### `tlkpAppVersion`
 
@@ -138,10 +162,17 @@ Stores official Powerball draw results. **One field per ball.**
 | `PB` | Number | Winning Powerball number | Integer | | 0 | | Powerball | | Is Null Or (>=1 And <=26) | Powerball must be between 1 and 26. | No | No |
 | `JackpotAmount` | Currency | Estimated or actual jackpot for this drawing | | Currency | 2 | | Jackpot Amount | 0 | >=0 | Jackpot amount cannot be negative. | No | No |
 | `IsVerified` | Yes/No | Whether results have been officially confirmed | | Yes/No | | | Verified | No | | | Yes | No |
+| `PowerPlayMultiplier` | Number | Power Play multiplier drawn for this drawing | Integer | | 0 | | Power Play Multiplier | | Is Null Or In (2,3,4,5,10) | Power Play multiplier must be 2, 3, 4, 5, or 10. | No | No |
+| `DPWB1` | Number | Double Play winning white ball 1 | Integer | | 0 | | DP WB 1 | | Is Null Or (>=1 And <=69) | Double Play white ball must be between 1 and 69. | No | No |
+| `DPWB2` | Number | Double Play winning white ball 2 | Integer | | 0 | | DP WB 2 | | Is Null Or (>=1 And <=69) | Double Play white ball must be between 1 and 69. | No | No |
+| `DPWB3` | Number | Double Play winning white ball 3 | Integer | | 0 | | DP WB 3 | | Is Null Or (>=1 And <=69) | Double Play white ball must be between 1 and 69. | No | No |
+| `DPWB4` | Number | Double Play winning white ball 4 | Integer | | 0 | | DP WB 4 | | Is Null Or (>=1 And <=69) | Double Play white ball must be between 1 and 69. | No | No |
+| `DPWB5` | Number | Double Play winning white ball 5 | Integer | | 0 | | DP WB 5 | | Is Null Or (>=1 And <=69) | Double Play white ball must be between 1 and 69. | No | No |
+| `DPPB` | Number | Double Play winning Powerball number | Integer | | 0 | | DP Powerball | | Is Null Or (>=1 And <=26) | Double Play Powerball must be between 1 and 26. | No | No |
 
 > **Additional rule:** All five white ball values (`WB1`–`WB5`) must be distinct. Enforce via VBA validation in `modLotteryLogic` before saving, since Access table-level validation cannot easily cross-reference five fields for uniqueness.
 >
-> **Note:** WB1–WB5 and PB are optional to allow creating future drawings (date only) before results are known. Match checking only runs against drawings where all six ball fields are populated.
+> **Note:** WB1–WB5 and PB are optional to allow creating future drawings (date only) before results are known. Match checking only runs against drawings where all six ball fields are populated. The same applies to Double Play fields — `DPWB1`–`DPWB5` and `DPPB` are only populated when Double Play results are available.
 
 #### `tblTickets`
 

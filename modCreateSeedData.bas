@@ -19,6 +19,7 @@ Public Sub SeedAllLookupTables()
 
     strResults = strResults & SeedStates() & vbCrLf
     strResults = strResults & SeedPrizeTiers() & vbCrLf
+    strResults = strResults & SeedDoublePlayPrizeTiers() & vbCrLf
 
     MsgBox "Seed Results:" & vbCrLf & vbCrLf & strResults, _
            vbInformation, APP_TITLE
@@ -113,7 +114,7 @@ Private Function SeedStates() As String
     AddStateRow rs, "AK", "Alaska", 0.24, 0#, False, False, False
     AddStateRow rs, "AZ", "Arizona", 0.24, 0.05, True, True, False
     AddStateRow rs, "AR", "Arkansas", 0.24, 0.055, True, True, False
-    AddStateRow rs, "CA", "California", 0.24, 0#, True, True, False
+    AddStateRow rs, "CA", "California", 0.24, 0#, True, False, False
     AddStateRow rs, "CO", "Colorado", 0.24, 0.04, True, True, True
     AddStateRow rs, "CT", "Connecticut", 0.24, 0.0699, True, True, False
     AddStateRow rs, "DE", "Delaware", 0.24, 0#, True, True, False
@@ -129,9 +130,9 @@ Private Function SeedStates() As String
     AddStateRow rs, "KY", "Kentucky", 0.24, 0.05, True, True, False
     AddStateRow rs, "LA", "Louisiana", 0.24, 0.05, True, True, False
     AddStateRow rs, "ME", "Maine", 0.24, 0.05, True, True, False
-    AddStateRow rs, "MD", "Maryland", 0.24, 0.0875, True, True, False
+    AddStateRow rs, "MD", "Maryland", 0.24, 0.0875, True, True, True
     AddStateRow rs, "MA", "Massachusetts", 0.24, 0.05, True, True, False
-    AddStateRow rs, "MI", "Michigan", 0.24, 0.0425, True, True, False
+    AddStateRow rs, "MI", "Michigan", 0.24, 0.0425, True, True, True
     AddStateRow rs, "MN", "Minnesota", 0.24, 0.0785, True, True, False
     AddStateRow rs, "MS", "Mississippi", 0.24, 0.05, False, False, False
     AddStateRow rs, "MO", "Missouri", 0.24, 0.0495, True, True, True
@@ -139,7 +140,7 @@ Private Function SeedStates() As String
     AddStateRow rs, "NE", "Nebraska", 0.24, 0.0684, True, True, False
     AddStateRow rs, "NV", "Nevada", 0.24, 0#, False, False, False
     AddStateRow rs, "NH", "New Hampshire", 0.24, 0#, True, True, False
-    AddStateRow rs, "NJ", "New Jersey", 0.24, 0.08, True, True, False
+    AddStateRow rs, "NJ", "New Jersey", 0.24, 0.08, True, True, True
     AddStateRow rs, "NM", "New Mexico", 0.24, 0.059, True, True, False
     AddStateRow rs, "NY", "New York", 0.24, 0.0882, True, True, False
     AddStateRow rs, "NC", "North Carolina", 0.24, 0.0525, True, True, False
@@ -149,14 +150,14 @@ Private Function SeedStates() As String
     AddStateRow rs, "OR", "Oregon", 0.24, 0.09, True, True, False
     AddStateRow rs, "PA", "Pennsylvania", 0.24, 0.0307, True, True, True
     AddStateRow rs, "RI", "Rhode Island", 0.24, 0.0599, True, True, False
-    AddStateRow rs, "SC", "South Carolina", 0.24, 0.07, True, True, False
+    AddStateRow rs, "SC", "South Carolina", 0.24, 0.07, True, True, True
     AddStateRow rs, "SD", "South Dakota", 0.24, 0#, True, True, False
     AddStateRow rs, "TN", "Tennessee", 0.24, 0#, True, True, True
     AddStateRow rs, "TX", "Texas", 0.24, 0#, True, True, True
     AddStateRow rs, "UT", "Utah", 0.24, 0#, False, False, False
     AddStateRow rs, "VT", "Vermont", 0.24, 0.06, True, True, False
-    AddStateRow rs, "VA", "Virginia", 0.24, 0.04, True, True, False
-    AddStateRow rs, "WA", "Washington", 0.24, 0#, True, True, False
+    AddStateRow rs, "VA", "Virginia", 0.24, 0.04, True, True, True
+    AddStateRow rs, "WA", "Washington", 0.24, 0#, True, True, True
     AddStateRow rs, "WV", "West Virginia", 0.24, 0.065, True, True, False
     AddStateRow rs, "WI", "Wisconsin", 0.24, 0.0765, True, True, False
     AddStateRow rs, "WY", "Wyoming", 0.24, 0#, True, True, False
@@ -242,5 +243,74 @@ Exit_Function:
 ErrorHandler:
     SeedPrizeTiers = "tlkpPrizeTiers: ERROR - " & Err.Description
     Debug.Print SeedPrizeTiers
+    Resume Exit_Function
+End Function
+
+'---------------------------------------------------------------------------------------
+' Name       : AddDoublePlayPrizeTierRow
+' Purpose    : Add a single row to tlkpDoublePlayPrizeTiers using a DAO recordset
+' Parameters : rs (DAO.Recordset) - Open recordset on tlkpDoublePlayPrizeTiers
+'              intWhiteMatches (Integer) - Number of white balls matched
+'              blnPBMatch (Boolean) - Whether Powerball was matched
+'              strName (String) - Display name for this prize tier
+'              curAmount (Currency) - Default prize amount
+' Returns    : None
+'---------------------------------------------------------------------------------------
+Private Sub AddDoublePlayPrizeTierRow(rs As DAO.Recordset, _
+                                      ByVal intWhiteMatches As Integer, _
+                                      ByVal blnPBMatch As Boolean, _
+                                      ByVal strName As String, _
+                                      ByVal curAmount As Currency)
+    rs.AddNew
+    rs!WhiteBallMatches = intWhiteMatches
+    rs!PowerballMatch = blnPBMatch
+    rs!PrizeName = strName
+    rs!DefaultPrizeAmount = curAmount
+    rs.Update
+End Sub
+
+'---------------------------------------------------------------------------------------
+' Name       : SeedDoublePlayPrizeTiers
+' Purpose    : Insert the 9 Double Play prize tiers into tlkpDoublePlayPrizeTiers.
+'              Skips if the table already contains any records.
+' Parameters : None
+' Returns    : String - Status message describing what happened
+'---------------------------------------------------------------------------------------
+Private Function SeedDoublePlayPrizeTiers() As String
+    On Error GoTo ErrorHandler
+
+    If RecordCount("tlkpDoublePlayPrizeTiers") > 0 Then
+        SeedDoublePlayPrizeTiers = "tlkpDoublePlayPrizeTiers: SKIPPED (already contains data)"
+        Exit Function
+    End If
+
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+
+    Set db = CurrentDb()
+    Set rs = db.OpenRecordset("tlkpDoublePlayPrizeTiers", dbOpenTable)
+
+    AddDoublePlayPrizeTierRow rs, 5, True, "DP Jackpot (5+PB)", CCur(10000000)
+    AddDoublePlayPrizeTierRow rs, 5, False, "DP Match 5", CCur(500000)
+    AddDoublePlayPrizeTierRow rs, 4, True, "DP Match 4+PB", CCur(50000)
+    AddDoublePlayPrizeTierRow rs, 4, False, "DP Match 4", CCur(500)
+    AddDoublePlayPrizeTierRow rs, 3, True, "DP Match 3+PB", CCur(500)
+    AddDoublePlayPrizeTierRow rs, 3, False, "DP Match 3", CCur(20)
+    AddDoublePlayPrizeTierRow rs, 2, True, "DP Match 2+PB", CCur(20)
+    AddDoublePlayPrizeTierRow rs, 1, True, "DP Match 1+PB", CCur(10)
+    AddDoublePlayPrizeTierRow rs, 0, True, "DP Match PB Only", CCur(7)
+
+    rs.Close
+    SeedDoublePlayPrizeTiers = "tlkpDoublePlayPrizeTiers: Seeded with 9 rows."
+    Debug.Print SeedDoublePlayPrizeTiers
+
+Exit_Function:
+    Set rs = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    SeedDoublePlayPrizeTiers = "tlkpDoublePlayPrizeTiers: ERROR - " & Err.Description
+    Debug.Print SeedDoublePlayPrizeTiers
     Resume Exit_Function
 End Function

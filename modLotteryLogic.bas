@@ -10,6 +10,11 @@ Public Const MIN_POWERBALL As Integer = 1
 Public Const MAX_POWERBALL As Integer = 26
 Public Const TOTAL_PRIZE_TIERS As Integer = 9
 
+' Power Play constants
+Public Const MIN_POWER_PLAY_MULTIPLIER As Integer = 2
+Public Const MAX_POWER_PLAY_MULTIPLIER As Integer = 10
+Public Const POWER_PLAY_MATCH5_AMOUNT As Currency = 2000000
+
 Private Const APP_TITLE As String = "Norris Powerball Pool"
 
 '---------------------------------------------------------------------------------------
@@ -235,4 +240,216 @@ Exit_Function:
 ErrorHandler:
     GetPrizeAmount = 0
     Resume Exit_Function
+End Function
+
+'---------------------------------------------------------------------------------------
+' Name       : GetPowerPlayPrizeAmount
+' Purpose    : Calculate the Power Play adjusted prize amount.
+'              Rules: Jackpot is not affected. Match 5 (no PB) is always
+'              $2,000,000. All other tiers multiply by the drawn multiplier.
+' Parameters : intWhiteMatches (Integer) - Number of white balls matched
+'              blnPBMatch (Boolean) - Whether Powerball was matched
+'              intMultiplier (Integer) - The Power Play multiplier drawn (2-10)
+' Returns    : Currency - Adjusted prize amount
+'---------------------------------------------------------------------------------------
+Public Function GetPowerPlayPrizeAmount(ByVal intWhiteMatches As Integer, _
+                                         ByVal blnPBMatch As Boolean, _
+                                         ByVal intMultiplier As Integer) As Currency
+    On Error GoTo ErrorHandler
+
+    Dim curBase As Currency
+    curBase = GetPrizeAmount(intWhiteMatches, blnPBMatch)
+
+    ' Jackpot (5+PB) is not affected by Power Play
+    If intWhiteMatches = MAX_WHITE_BALLS And blnPBMatch Then
+        GetPowerPlayPrizeAmount = curBase
+        Exit Function
+    End If
+
+    ' Match 5 (no PB) is always $2,000,000 with Power Play
+    If intWhiteMatches = MAX_WHITE_BALLS And Not blnPBMatch Then
+        GetPowerPlayPrizeAmount = POWER_PLAY_MATCH5_AMOUNT
+        Exit Function
+    End If
+
+    ' All other tiers multiply by the drawn multiplier
+    If intMultiplier >= MIN_POWER_PLAY_MULTIPLIER And _
+       intMultiplier <= MAX_POWER_PLAY_MULTIPLIER Then
+        GetPowerPlayPrizeAmount = curBase * intMultiplier
+    Else
+        GetPowerPlayPrizeAmount = curBase
+    End If
+
+Exit_Function:
+    Exit Function
+
+ErrorHandler:
+    GetPowerPlayPrizeAmount = 0
+    Resume Exit_Function
+End Function
+
+'---------------------------------------------------------------------------------------
+' Name       : GetDoublePlayPrizeTierName
+' Purpose    : Look up the Double Play prize tier name for a given match result
+' Parameters : intWhiteMatches (Integer) - Number of white balls matched
+'              blnPBMatch (Boolean) - Whether Powerball was matched
+' Returns    : String - Prize tier name (empty string if no matching tier)
+'---------------------------------------------------------------------------------------
+Public Function GetDoublePlayPrizeTierName(ByVal intWhiteMatches As Integer, _
+                                            ByVal blnPBMatch As Boolean) As String
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    Dim strSQL As String
+
+    Set db = CurrentDb()
+
+    strSQL = "SELECT PrizeName FROM tlkpDoublePlayPrizeTiers " & _
+             "WHERE WhiteBallMatches = " & intWhiteMatches & _
+             " AND PowerballMatch = " & CInt(blnPBMatch)
+
+    Set rs = db.OpenRecordset(strSQL, dbOpenSnapshot)
+
+    If Not rs.EOF Then
+        GetDoublePlayPrizeTierName = rs!PrizeName
+    Else
+        GetDoublePlayPrizeTierName = ""
+    End If
+
+    rs.Close
+
+Exit_Function:
+    Set rs = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    GetDoublePlayPrizeTierName = ""
+    Resume Exit_Function
+End Function
+
+'---------------------------------------------------------------------------------------
+' Name       : GetDoublePlayPrizeAmount
+' Purpose    : Look up the Double Play prize amount for a given match result
+' Parameters : intWhiteMatches (Integer) - Number of white balls matched
+'              blnPBMatch (Boolean) - Whether Powerball was matched
+' Returns    : Currency - Default prize amount (0 if no matching tier)
+'---------------------------------------------------------------------------------------
+Public Function GetDoublePlayPrizeAmount(ByVal intWhiteMatches As Integer, _
+                                          ByVal blnPBMatch As Boolean) As Currency
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    Dim strSQL As String
+
+    Set db = CurrentDb()
+
+    strSQL = "SELECT DefaultPrizeAmount FROM tlkpDoublePlayPrizeTiers " & _
+             "WHERE WhiteBallMatches = " & intWhiteMatches & _
+             " AND PowerballMatch = " & CInt(blnPBMatch)
+
+    Set rs = db.OpenRecordset(strSQL, dbOpenSnapshot)
+
+    If Not rs.EOF Then
+        GetDoublePlayPrizeAmount = rs!DefaultPrizeAmount
+    Else
+        GetDoublePlayPrizeAmount = 0
+    End If
+
+    rs.Close
+
+Exit_Function:
+    Set rs = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    GetDoublePlayPrizeAmount = 0
+    Resume Exit_Function
+End Function
+
+'---------------------------------------------------------------------------------------
+' Name       : IsStateFeatureAvailable
+' Purpose    : Check whether a specific feature (Power Play/Double Play)
+'              is available for a given state
+' Parameters : strStateCode (String) - Two-letter state code
+'              strFeature (String) - "PowerPlay" or "DoublePlay"
+' Returns    : Boolean - True if the feature is available
+'---------------------------------------------------------------------------------------
+Public Function IsStateFeatureAvailable(ByVal strStateCode As String, _
+                                         ByVal strFeature As String) As Boolean
+    On Error GoTo ErrorHandler
+
+    Dim db As DAO.Database
+    Dim rs As DAO.Recordset
+    Dim strField As String
+
+    Select Case strFeature
+        Case "PowerPlay"
+            strField = "HasPowerPlay"
+        Case "DoublePlay"
+            strField = "HasDoublePlay"
+        Case Else
+            IsStateFeatureAvailable = False
+            Exit Function
+    End Select
+
+    Set db = CurrentDb()
+
+    Dim qdf As DAO.QueryDef
+    Set qdf = db.CreateQueryDef("")
+    qdf.SQL = "PARAMETERS prmStateCode Text(2); " & _
+              "SELECT " & strField & " FROM tlkpStates " & _
+              "WHERE StateCode = prmStateCode"
+    qdf.Parameters("prmStateCode") = strStateCode
+    Set rs = qdf.OpenRecordset(dbOpenSnapshot)
+
+    If Not rs.EOF Then
+        IsStateFeatureAvailable = rs.Fields(strField)
+    Else
+        IsStateFeatureAvailable = False
+    End If
+
+    rs.Close
+
+Exit_Function:
+    Set rs = Nothing
+    Set qdf = Nothing
+    Set db = Nothing
+    Exit Function
+
+ErrorHandler:
+    IsStateFeatureAvailable = False
+    Resume Exit_Function
+End Function
+
+'---------------------------------------------------------------------------------------
+' Name       : ValidateTicketPlayOptions
+' Purpose    : Validate that Power Play and Double Play selections are allowed
+'              for the current state of play
+' Parameters : blnIsPowerPlay (Boolean) - Whether Power Play is selected
+'              blnIsDoublePlay (Boolean) - Whether Double Play is selected
+'              strErrorMsg (String) - ByRef, receives error description if invalid
+' Returns    : Boolean - True if selections are valid
+'---------------------------------------------------------------------------------------
+Public Function ValidateTicketPlayOptions(ByVal blnIsPowerPlay As Boolean, _
+                                           ByVal blnIsDoublePlay As Boolean, _
+                                           ByRef strErrorMsg As String) As Boolean
+    strErrorMsg = ""
+
+    If blnIsPowerPlay And Not gblnHasPowerPlay Then
+        strErrorMsg = "Power Play is not available in " & gstrStateOfPlay & "."
+        ValidateTicketPlayOptions = False
+        Exit Function
+    End If
+
+    If blnIsDoublePlay And Not gblnHasDoublePlay Then
+        strErrorMsg = "Double Play is not available in " & gstrStateOfPlay & "."
+        ValidateTicketPlayOptions = False
+        Exit Function
+    End If
+
+    ValidateTicketPlayOptions = True
 End Function

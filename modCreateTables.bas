@@ -16,6 +16,7 @@ Public Sub CreateAllTables()
     ' Create tables in dependency order (parents before children)
     CreateTable_tlkpStates
     CreateTable_tlkpPrizeTiers
+    CreateTable_tlkpDoublePlayPrizeTiers
     CreateTable_tlkpAppVersion
     CreateTable_tblParticipants
     CreateTable_tblDrawings
@@ -340,6 +341,120 @@ Exit_Procedure:
 
 ErrorHandler:
     MsgBox "An error occurred in: CreateTable_tlkpPrizeTiers" & vbCrLf & vbCrLf & _
+           "Error #: " & Err.Number & vbCrLf & _
+           "Description: " & Err.Description, _
+           vbCritical, APP_TITLE
+    Resume Exit_Procedure
+End Sub
+
+'---------------------------------------------------------------------------------------
+' Name       : CreateTable_tlkpDoublePlayPrizeTiers
+' Purpose    : Create the tlkpDoublePlayPrizeTiers lookup table (9 Double Play
+'              prize tiers with fixed amounts)
+' Parameters : None
+' Returns    : None
+'---------------------------------------------------------------------------------------
+Private Sub CreateTable_tlkpDoublePlayPrizeTiers()
+    On Error GoTo ErrorHandler
+
+    If TableExists("tlkpDoublePlayPrizeTiers") Then
+        Debug.Print "Table tlkpDoublePlayPrizeTiers already exists - skipped."
+        Exit Sub
+    End If
+
+    Dim db As DAO.Database
+    Dim td As DAO.TableDef
+    Dim fld As DAO.Field
+    Dim idx As DAO.Index
+
+    Set db = CurrentDb()
+    Set td = db.CreateTableDef("tlkpDoublePlayPrizeTiers")
+
+    ' --- DPPrizeTierID (AutoNumber PK) ---
+    Set fld = td.CreateField("DPPrizeTierID", dbLong)
+    fld.Attributes = dbAutoIncrField
+    fld.Required = True
+    td.Fields.Append fld
+
+    ' --- WhiteBallMatches (Integer) ---
+    Set fld = td.CreateField("WhiteBallMatches", dbInteger)
+    fld.Required = True
+    fld.ValidationRule = ">=0 And <=5"
+    fld.ValidationText = "White ball matches must be between 0 and 5."
+    td.Fields.Append fld
+
+    ' --- PowerballMatch (Yes/No) ---
+    Set fld = td.CreateField("PowerballMatch", dbBoolean)
+    fld.Required = True
+    fld.DefaultValue = "False"
+    td.Fields.Append fld
+
+    ' --- PrizeName (Short Text, 50) ---
+    Set fld = td.CreateField("PrizeName", dbText, 50)
+    fld.Required = True
+    fld.AllowZeroLength = False
+    td.Fields.Append fld
+
+    ' --- DefaultPrizeAmount (Currency) ---
+    Set fld = td.CreateField("DefaultPrizeAmount", dbCurrency)
+    fld.Required = True
+    fld.DefaultValue = "0"
+    fld.ValidationRule = ">=0"
+    fld.ValidationText = "Default prize amount cannot be negative."
+    td.Fields.Append fld
+
+    ' --- Primary Key ---
+    Set idx = td.CreateIndex("PrimaryKey")
+    idx.Primary = True
+    idx.Unique = True
+    idx.Required = True
+    Set fld = idx.CreateField("DPPrizeTierID")
+    idx.Fields.Append fld
+    td.Indexes.Append idx
+
+    ' Append table to database
+    db.TableDefs.Append td
+    db.TableDefs.Refresh
+
+    ' --- Set custom properties ---
+    Set td = db.TableDefs("tlkpDoublePlayPrizeTiers")
+
+    Set fld = td.Fields("DPPrizeTierID")
+    SetFieldProperty fld, "Description", dbText, "Auto-generated Double Play tier identifier"
+    SetFieldProperty fld, "Caption", dbText, "DP Prize Tier ID"
+
+    Set fld = td.Fields("WhiteBallMatches")
+    SetFieldProperty fld, "Description", dbText, "Number of white balls matched (0-5)"
+    SetFieldProperty fld, "Caption", dbText, "White Ball Matches"
+    SetFieldProperty fld, "DecimalPlaces", dbByte, 0
+
+    Set fld = td.Fields("PowerballMatch")
+    SetFieldProperty fld, "Description", dbText, "Whether the Powerball was also matched"
+    SetFieldProperty fld, "Caption", dbText, "Powerball Match"
+    SetFieldProperty fld, "Format", dbText, "Yes/No"
+
+    Set fld = td.Fields("PrizeName")
+    SetFieldProperty fld, "Description", dbText, _
+        "Display name (e.g., ""DP Jackpot"", ""DP Match 4+PB"")"
+    SetFieldProperty fld, "Caption", dbText, "Prize Name"
+
+    Set fld = td.Fields("DefaultPrizeAmount")
+    SetFieldProperty fld, "Description", dbText, "Fixed Double Play prize amount"
+    SetFieldProperty fld, "Caption", dbText, "Default Prize Amount"
+    SetFieldProperty fld, "Format", dbText, "Currency"
+    SetFieldProperty fld, "DecimalPlaces", dbByte, 2
+
+    Debug.Print "Table tlkpDoublePlayPrizeTiers created successfully."
+
+Exit_Procedure:
+    Set fld = Nothing
+    Set idx = Nothing
+    Set td = Nothing
+    Set db = Nothing
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "An error occurred in: CreateTable_tlkpDoublePlayPrizeTiers" & vbCrLf & vbCrLf & _
            "Error #: " & Err.Number & vbCrLf & _
            "Description: " & Err.Description, _
            vbCritical, APP_TITLE
@@ -725,6 +840,29 @@ Private Sub CreateTable_tblDrawings()
     fld.DefaultValue = "False"
     td.Fields.Append fld
 
+    ' --- PowerPlayMultiplier (Integer) — optional, the drawn PP multiplier ---
+    Set fld = td.CreateField("PowerPlayMultiplier", dbInteger)
+    fld.Required = False
+    fld.ValidationRule = "Is Null Or In (2,3,4,5,10)"
+    fld.ValidationText = "Power Play multiplier must be 2, 3, 4, 5, or 10."
+    td.Fields.Append fld
+
+    ' --- DPWB1 through DPWB5 (Integer, 1-69) — optional Double Play white balls ---
+    For i = 1 To 5
+        Set fld = td.CreateField("DPWB" & i, dbInteger)
+        fld.Required = False
+        fld.ValidationRule = "Is Null Or (>=1 And <=69)"
+        fld.ValidationText = "Double Play white ball must be between 1 and 69."
+        td.Fields.Append fld
+    Next i
+
+    ' --- DPPB (Integer, 1-26) — optional Double Play Powerball ---
+    Set fld = td.CreateField("DPPB", dbInteger)
+    fld.Required = False
+    fld.ValidationRule = "Is Null Or (>=1 And <=26)"
+    fld.ValidationText = "Double Play Powerball must be between 1 and 26."
+    td.Fields.Append fld
+
     ' --- Primary Key ---
     Set idx = td.CreateIndex("PrimaryKey")
     idx.Primary = True
@@ -784,6 +922,26 @@ Private Sub CreateTable_tblDrawings()
         "Whether results have been officially confirmed"
     SetFieldProperty fld, "Caption", dbText, "Verified"
     SetFieldProperty fld, "Format", dbText, "Yes/No"
+
+    Set fld = td.Fields("PowerPlayMultiplier")
+    SetFieldProperty fld, "Description", dbText, _
+        "Power Play multiplier drawn for this drawing (2, 3, 4, 5, or 10)"
+    SetFieldProperty fld, "Caption", dbText, "Power Play Multiplier"
+    SetFieldProperty fld, "DecimalPlaces", dbByte, 0
+
+    For i = 1 To 5
+        Set fld = td.Fields("DPWB" & i)
+        SetFieldProperty fld, "Description", dbText, _
+            "Double Play winning white ball " & i
+        SetFieldProperty fld, "Caption", dbText, "DP WB " & i
+        SetFieldProperty fld, "DecimalPlaces", dbByte, 0
+    Next i
+
+    Set fld = td.Fields("DPPB")
+    SetFieldProperty fld, "Description", dbText, _
+        "Double Play winning Powerball number"
+    SetFieldProperty fld, "Caption", dbText, "DP Powerball"
+    SetFieldProperty fld, "DecimalPlaces", dbByte, 0
 
     Debug.Print "Table tblDrawings created successfully."
 

@@ -16,7 +16,8 @@ A professional-grade Microsoft Access application (.accdb) for managing Powerbal
 | Powerball | Pick 1 from 1–26 |
 | Draw schedule | Monday, Wednesday, Saturday |
 | Prize tiers | 9 total (0+PB through 5+PB) |
-| Power Play | Optional multiplier (2x–10x, excludes jackpot) — do NOT implement until asked |
+| Power Play | Optional multiplier (2x, 3x, 4x, 5x, or 10x). Match 5 (no PB) always = $2M. Jackpot excluded. |
+| Double Play | Separate drawing with its own set of winning numbers. 9 prize tiers with fixed amounts ($10M top prize). Available in select states only. |
 
 ## Database Creation
 
@@ -36,6 +37,7 @@ See [DATABASE-CREATION.md](DATABASE-CREATION.md) for complete step-by-step instr
 | `modFormEvents.bas` | `modFormEvents` | Navigation and form event handler functions |
 | `modCreateForms.bas` | `modCreateForms` | Programmatic form creation via DAO |
 | `modStartup.bas` | `modStartup` | App initialization and startup configuration |
+| `modBatchSQL.bas` | `modBatchSQL` | Developer utility — batch-execute SQL from `.sql` files |
 
 ---
 
@@ -61,8 +63,10 @@ See [DATABASE-CREATION.md](DATABASE-CREATION.md) for complete step-by-step instr
 
 | Query Name | Purpose |
 |---|---|
-| `qryMatchCheck` | Compare `tblTickets` entries against `tblDrawings` results for a given `DrawingID`. Count matching white balls (unordered set comparison) and check Powerball exact match. |
-| `qryWinningTickets` | Filter `qryMatchCheck` results to only rows with at least one prize-tier match (0+PB or better). |
+| `qryMatchCheck` | Compare `tblTickets` entries against `tblDrawings` results. Count matching white balls (unordered set comparison), check Powerball exact match, include `PowerPlayMultiplier`. |
+| `qryWinningTickets` | Filter `qryMatchCheck` to prize-tier matches. Computes `AdjustedPrizeAmount` for Power Play tickets (Match 5 = $2M, jackpot unaffected, others × multiplier). |
+| `qryDoublePlayMatchCheck` | Compare `IsDoublePlay` tickets against Double Play drawing numbers (`DPWB1`–`DPWB5`, `DPPB`). |
+| `qryDoublePlayWinningTickets` | Filter `qryDoublePlayMatchCheck` to prize-tier matches using `tlkpDoublePlayPrizeTiers`. |
 | `qryUnpaidParticipants` | Find active participants with no contribution record for a given `DrawingID`. |
 | `qryTicketsByDrawing` | List all tickets for a selected drawing. |
 
@@ -148,5 +152,21 @@ The core matching algorithm compares a ticket's five white balls against the dra
 1. Count how many of the ticket's `WB1`–`WB5` values appear in the drawing's `WB1`–`WB5` values.
 2. Check if the ticket's `PB` equals the drawing's `PB`.
 3. Look up the resulting (white ball count, Powerball match) pair in `tlkpPrizeTiers` to determine the prize tier.
+
+### Power Play
+
+If the ticket has `IsPowerPlay = True` and the drawing has a `PowerPlayMultiplier`, the prize is adjusted:
+
+- **Jackpot (5+PB):** Not affected by Power Play.
+- **Match 5 (no PB):** Always $2,000,000 with Power Play regardless of multiplier.
+- **All other tiers:** Base prize × the drawn multiplier (2x, 3x, 4x, 5x, or 10x).
+
+The adjusted amount is computed in `qryWinningTickets` as `AdjustedPrizeAmount`.
+
+### Double Play
+
+Tickets with `IsDoublePlay = True` are entered into a **separate drawing** with its own set of winning numbers (`DPWB1`–`DPWB5`, `DPPB` in `tblDrawings`). Double Play has its own fixed prize tiers in `tlkpDoublePlayPrizeTiers` (top prize: $10,000,000).
+
+Double Play is only available in select states — controlled by `HasDoublePlay` in `tlkpStates`. The `frmTicketEntry` form automatically enables/disables the Double Play checkbox based on the current state of play.
 
 This logic lives in `modLotteryLogic`, not in form code-behind.
